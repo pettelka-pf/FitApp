@@ -3,6 +3,7 @@ import com.fitapp.navigation.Navigator;
 
 import com.fitapp.model.EmptyFieldException;
 import com.fitapp.model.InvalidCredentialsException;
+import com.fitapp.model.Session;
 
 import com.fitapp.model.UserDatabaseSQLite;
 import com.fitapp.model.UserRepository;
@@ -68,6 +69,10 @@ public class LoginController implements Controller {
         try {
             userDB.validateInput(usernameField.getText(), passwordField.getText());
             errorLabel.setVisible(false);
+
+            // Christian: Name vom Login merken. Step Counter und Statistik brauchen ihn.
+            Session.setUser(usernameField.getText());
+
             changeView("mainMenu.fxml");
 
         } catch (EmptyFieldException e) {

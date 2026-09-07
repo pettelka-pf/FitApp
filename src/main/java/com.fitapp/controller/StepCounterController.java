@@ -1,14 +1,28 @@
 package com.fitapp.controller;
 
-import com.fitapp.model.StepTracker;
-import com.fitapp.model.NegativeStepsException;
-import com.fitapp.model.StepLimitExceededException;
+import com.fitapp.model.Session;
+import com.fitapp.model.StepCsv;
+import com.fitapp.model.StepEntry;
 import com.fitapp.navigation.Navigator;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.event.ActionEvent;
+import javafx.scene.layout.VBox;
 
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+
+/**
+ * Christian: Step-Counter-Seite mit drei Spalten.
+ * LINKS  - Rechner: aus Gewicht und Zeitraum das noetige Tagesziel (Soll).
+ * MITTE  - Schritte fuer einen Tag eintragen (Ist).
+ * RECHTS - Monatsuebersicht: Soll gegen Ist, Monat waehlbar.
+ */
 public class StepCounterController implements Controller {
 
     private Navigator navigator;
@@ -23,100 +37,244 @@ public class StepCounterController implements Controller {
         navigator.changeView(fxmlFile);
     }
 
-    // -------------------------
-    // MODEL
-    // -------------------------
-    private StepTracker stepTracker;
+    // Christian: zuletzt berechnetes Schrittziel. 0 = noch nicht berechnet.
+    private long sollSchritte = 0;
 
-    // -------------------------
-    // FXML FIELDS
-    // -------------------------
+    // Christian: Felder der linken Spalte (Rechner).
+    @FXML private Label userNameLabel;
+    @FXML private TextField currentWeightField;
+    @FXML private TextField targetWeightField;
+    @FXML private DatePicker startDatePicker;
+    @FXML private DatePicker endDatePicker;
+    @FXML private Label tageLabel;
+    @FXML private Label calcResultLabel;
+
+    // Christian: Felder der mittleren Spalte (Eintragen).
+    @FXML private DatePicker datumPicker;
+    @FXML private Label sollLabel;
+    @FXML private TextField erreichteSchritteField;
+    @FXML private Label saveInfoLabel;
+
+    // Christian: Felder der rechten Spalte (Uebersicht).
+    @FXML private Label uebersichtBenutzerLabel;
+    @FXML private ComboBox<String> monatBox;
+    @FXML private VBox uebersichtBox;
+    @FXML private Label uebersichtSummeLabel;
+
+    // Christian: laeuft automatisch nach dem Laden der FXML.
     @FXML
-    private TextField goalField;
+    public void initialize() {
+        userNameLabel.setText("Angemeldet: " + Session.getUser());
+        uebersichtBenutzerLabel.setText("Benutzer: " + Session.getUser());
 
-    @FXML
-    private TextField stepsField;
+        // Christian: Datumsfelder auf heute setzen.
+        startDatePicker.setValue(LocalDate.now());
+        datumPicker.setValue(LocalDate.now());
 
-    @FXML
-    private TextField remainingField;
+        sollLabel.setText("noch nicht berechnet");
+        tageLabel.setText("0 Tage");
 
-    @FXML
-    private Label stepOverflowLabel;
-
-    // -------------------------
-    // SET GOAL (USER INPUT)
-    // -------------------------
-    @FXML
-    public void handleSetGoal(ActionEvent event) {
-        try {
-            int goal = Integer.parseInt(goalField.getText());
-
-            stepTracker = new StepTracker(goal);
-
-            remainingField.textProperty().bind(
-                    stepTracker.remainingStepsProperty().asString()
-            );
-
-            stepOverflowLabel.setVisible(false);
-
-        } catch (NumberFormatException e) {
-            stepOverflowLabel.setText("Please enter a valid step goal.");
-            stepOverflowLabel.setVisible(true);
+        // Christian: letzte 12 Monate in die Auswahl.
+        YearMonth jetzt = YearMonth.now();
+        for (int i = 0; i < 12; i++) {
+            monatBox.getItems().add(jetzt.minusMonths(i).toString());
         }
+        monatBox.setValue(jetzt.toString());
+
+        zeigeTag();
+        aktualisiereUebersicht();
     }
 
-    // -------------------------
-    // ADD STEPS
-    // -------------------------
+    // Christian: Datum in der Mitte gewechselt -> gespeicherte Schritte anzeigen.
     @FXML
-    public void handleAddingSteps() {
-        if (stepTracker == null) {
-            stepOverflowLabel.setText("Please set a goal first.");
-            stepOverflowLabel.setVisible(true);
+    public void handleTagWechsel() {
+        zeigeTag();
+    }
+
+    // Christian: einen Tag weiter springen.
+    @FXML
+    public void handleNextDay() {
+        LocalDate aktuell = datumPicker.getValue();
+        if (aktuell == null) {
+            aktuell = LocalDate.now();
+        }
+        datumPicker.setValue(aktuell.plusDays(1));
+        zeigeTag();
+    }
+
+    // Christian: gespeicherte Schritte fuer das Datum ins Feld holen (sonst leer).
+    private void zeigeTag() {
+        LocalDate datum = datumPicker.getValue();
+        if (datum == null) {
             return;
         }
+        int gespeichert = StepCsv.schritteFuer(Session.getUser(), datum);
+        if (gespeichert > 0) {
+            erreichteSchritteField.setText(String.valueOf(gespeichert));
+        } else {
+            erreichteSchritteField.clear();
+        }
+    }
 
+    // Christian: Start- oder Enddatum geaendert -> Anzahl Tage anzeigen.
+    @FXML
+    public void handleDatumWechsel() {
+        LocalDate start = startDatePicker.getValue();
+        LocalDate ende = endDatePicker.getValue();
+        if (start != null && ende != null) {
+            long tage = ChronoUnit.DAYS.between(start, ende);
+            tageLabel.setText(tage + " Tage");
+        }
+    }
+
+    // Christian: LINKS - noetiges Schrittziel berechnen.
+    @FXML
+    public void handleCalcSteps() {
         try {
-            int steps = Integer.parseInt(stepsField.getText());
+            double aktuell = Double.parseDouble(currentWeightField.getText());
+            double wunsch = Double.parseDouble(targetWeightField.getText());
 
-            stepTracker.addSteps(steps);
+            LocalDate start = startDatePicker.getValue();
+            LocalDate ende = endDatePicker.getValue();
+            if (start == null || ende == null) {
+                calcResultLabel.setText("Bitte Start- und Enddatum waehlen.");
+                return;
+            }
 
-            remainingField.textProperty().bind(
-                    stepTracker.remainingStepsProperty().asString()
-            );
+            long tage = ChronoUnit.DAYS.between(start, ende);
+            tageLabel.setText(tage + " Tage");
 
-            stepOverflowLabel.setVisible(false);
+            double abzunehmen = aktuell - wunsch; // kg
 
-        } catch (NegativeStepsException e) {
-            stepOverflowLabel.setText("Steps must be a positive number!");
-            stepOverflowLabel.setVisible(true);
+            if (abzunehmen <= 0 || tage <= 0) {
+                calcResultLabel.setText(
+                        "Bitte Wunschgewicht kleiner als aktuelles Gewicht "
+                        + "und ein Enddatum nach dem Startdatum waehlen.");
+                return;
+            }
 
-        } catch (StepLimitExceededException e) {
-            stepOverflowLabel.setText("Exceeded daily step goal!");
-            stepOverflowLabel.setVisible(true);
+            // Christian: 1 kg Fett = ca. 7000 kcal.
+            double gesamtDefizit = abzunehmen * 7000.0;
+
+            // Christian: noetiges Defizit pro Tag.
+            double defizitProTag = gesamtDefizit / tage;
+
+            // Christian: kcal pro Schritt, grob aus dem Gewicht.
+            // 10.000 Schritte ~ Gewicht * 5,8 kcal.
+            double kcalProSchritt = aktuell * 5.8 / 10000.0;
+
+            sollSchritte = Math.round(defizitProTag / kcalProSchritt);
+
+            calcResultLabel.setText("ca. " + sollSchritte + " Schritte pro Tag");
+            sollLabel.setText(sollSchritte + " Schritte");
+            aktualisiereUebersicht();
 
         } catch (NumberFormatException e) {
-            stepOverflowLabel.setText("Please enter a valid number.");
-            stepOverflowLabel.setVisible(true);
+            calcResultLabel.setText("Bitte fuer Gewicht Zahlen eingeben.");
         }
     }
 
-    // -------------------------
-    // RESET
-    // -------------------------
+    // Christian: MITTE - erreichte Schritte fuer einen Tag speichern.
     @FXML
-    public void handleReset(ActionEvent event) {
-        if (stepTracker != null) {
-            stepTracker.reset();
-        }
+    public void handleSaveSteps() {
+        try {
+            int erreicht = Integer.parseInt(erreichteSchritteField.getText());
 
-        stepsField.setText("");
-        stepOverflowLabel.setVisible(false);
+            if (erreicht < 0) {
+                saveInfoLabel.setText("Schritte duerfen nicht negativ sein.");
+                return;
+            }
+
+            LocalDate datum = datumPicker.getValue();
+            if (datum == null) {
+                saveInfoLabel.setText("Bitte ein Datum waehlen.");
+                return;
+            }
+
+            // Christian: in steps.csv speichern, Eintrag vom selben Tag wird ersetzt.
+            StepCsv.saveOrReplace(new StepEntry(
+                    Session.getUser(),
+                    datum,
+                    erreicht,
+                    (int) sollSchritte));
+
+            saveInfoLabel.setText("Gespeichert: " + erreicht
+                    + " Schritte am " + datum + ".");
+
+            aktualisiereUebersicht();
+
+        } catch (NumberFormatException e) {
+            saveInfoLabel.setText("Bitte eine Zahl eingeben.");
+        }
     }
 
-    // -------------------------
-    // BACK
-    // -------------------------
+    // Christian: Eintrag fuer das gewaehlte Datum loeschen.
+    @FXML
+    public void handleResetTag() {
+        LocalDate datum = datumPicker.getValue();
+        if (datum == null) {
+            saveInfoLabel.setText("Bitte ein Datum waehlen.");
+            return;
+        }
+        StepCsv.delete(Session.getUser(), datum);
+        erreichteSchritteField.clear();
+        saveInfoLabel.setText("Eintrag fuer " + datum + " zurueckgesetzt.");
+        aktualisiereUebersicht();
+    }
+
+    // Christian: anderer Monat gewaehlt -> Uebersicht neu aufbauen.
+    @FXML
+    public void handleMonatWechsel() {
+        aktualisiereUebersicht();
+    }
+
+    // Christian: RECHTS - Monatsuebersicht Soll gegen Ist aufbauen.
+    private void aktualisiereUebersicht() {
+        String user = Session.getUser();
+        List<StepEntry> alle = StepCsv.readAll();
+
+        uebersichtBox.getChildren().clear();
+
+        String monatText = monatBox.getValue();
+        if (monatText == null) {
+            return;
+        }
+        YearMonth monat = YearMonth.parse(monatText);
+
+        long summeSoll = 0;
+        long summeIst = 0;
+
+        // Christian: jeden Tag des Monats durchgehen.
+        for (int tagNr = 1; tagNr <= monat.lengthOfMonth(); tagNr++) {
+            LocalDate tag = monat.atDay(tagNr);
+
+            int ist = 0;
+            int gespeichertesSoll = 0;
+
+            for (StepEntry e : alle) {
+                if (e.username.equals(user) && e.datum.equals(tag)) {
+                    ist += e.schritte;
+                    gespeichertesSoll = e.ziel;
+                }
+            }
+
+            // Christian: Soll aus der Berechnung, sonst das gespeicherte Soll.
+            long soll = (sollSchritte > 0) ? sollSchritte : gespeichertesSoll;
+
+            summeSoll += soll;
+            summeIst += ist;
+
+            String haken = (soll > 0 && ist >= soll) ? "   OK" : "";
+            Label zeile = new Label(
+                    tag + "    Soll: " + soll + "    Ist: " + ist + haken);
+            uebersichtBox.getChildren().add(zeile);
+        }
+
+        uebersichtSummeLabel.setText("Monat gesamt  ->  Soll: " + summeSoll
+                + "    Ist: " + summeIst);
+    }
+
+    // Christian: zurueck ins Hauptmenue.
     @FXML
     public void handleBackToMenu(ActionEvent event) {
         changeView("mainMenu.fxml");
