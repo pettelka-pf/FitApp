@@ -15,7 +15,7 @@ import java.time.YearMonth;
 /**
  * Christian: Seite "StepCounter Statistik".
  * Man waehlt einen Monat. Das Balkendiagramm zeigt pro Tag die
- * erreichten Schritte des angemeldeten Benutzers (aus steps.csv).
+ * erreichten Schritte des angemeldeten Benutzers (aus der Datenbank).
  */
 public class StatisticsController implements Controller {
 
@@ -41,7 +41,7 @@ public class StatisticsController implements Controller {
     public void initialize() {
 
         // Christian: angemeldeten Benutzer anzeigen.
-        userNameLabel.setText("Angemeldet: " + Session.getUser());
+        userNameLabel.setText("Angemeldet: " + Session.getUsername());
 
         // Christian: letzte 12 Monate in die Auswahl, aktueller Monat vorne.
         YearMonth jetzt = YearMonth.now();
@@ -68,9 +68,15 @@ public class StatisticsController implements Controller {
         }
         YearMonth monat = YearMonth.parse(monatText);
 
-        // Christian: Statistic wertet steps.csv fuer Benutzer und Monat aus.
+        // Christian: ohne Login gibt es keine Daten.
+        if (!Session.isLoggedIn()) {
+            chart.getData().clear();
+            return;
+        }
+
+        // Christian: Statistic wertet die steps-Tabelle fuer Benutzer und Monat aus.
         Statistic s = new Statistic(
-                Session.getUser(),
+                Session.getUserId(),
                 monat.atDay(1),
                 monat.atDay(monat.lengthOfMonth()));
 

@@ -1,5 +1,13 @@
 # Step Counter + Statistik - Schritt fuer Schritt (Christian)
 
+> **Hinweis (Stand nach dem Merge mit `main`):**
+> Dieser Text beschreibt den ersten Entwurf mit einer CSV-Datei.
+> Beim Zusammenführen mit `main` wurde der Step Counter von `main` übernommen
+> (Speicherung in der Datenbank). `StepCsv`, `StepEntry` und `steps.csv` sind
+> weg, `Session` kommt jetzt von `main`. Geblieben ist die **Statistik-Seite**;
+> sie liest die Schritte jetzt aus der Tabelle `steps`.
+
+
 Ganz einfache Erklaerung, in der Reihenfolge, wie man es baut und erklaeren kann.
 Alle Kommentare im Code, die zu diesen Aenderungen gehoeren, fangen mit
 `Christian:` an.

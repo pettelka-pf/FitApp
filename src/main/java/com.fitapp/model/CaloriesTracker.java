@@ -1,63 +1,141 @@
 package com.fitapp.model;
 
+import javafx.beans.binding.Bindings;
 import javafx.beans.binding.IntegerBinding;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 
 public class CaloriesTracker {
 
-    /**
-     * This class uses Java Property classes to implement and take advantage of the observer pattern.
-     * The observer pattern is a design pattern in which an object, known as the subject,
-     * maintains a list of its dependents, known as observers, and notifies them automatically of any state changes.
-     * These property classes are observers under the hood.
-     *
-     * Why do we use this:
-     * Loose coupling: Observers are notified of state changes without needing to know anything about the subject
-     * This makes it easy to add, remove, or modify obs
-     * Ihre Statusmeldung wird in Chats und Kanälen angezeigt, wenn Personen Ihnen Nachrichten senden oder Sie @erwähnen.ervers without affecting the subject
-     *
-     * The observer pattern is highly flexible and can be used in a wide range of software applications.
-     *
-     * The observer pattern establishes a one-to-many relationship. We have one subject and multiple observers.
-     * The subject in this scenario is the CaloriesTracker class more specifically its attributes (observable states).
-     * The observers are anything which listens or binds to these attributes. So if the attributes ever change they
-     * notify the observers.
-     */
+    // -------------------------
+    // ATTRIBUTES
+    // -------------------------
 
-    // attributes
-    private final IntegerProperty consumed = new SimpleIntegerProperty(0);
+    /**
+     * Anzahl der gegessenen Kalorien.
+     */
+    private final IntegerProperty consumed =
+            new SimpleIntegerProperty(0);
+
+    /**
+     * Tägliches Kalorienziel.
+     */
     private final IntegerProperty dailyLimit;
 
-    // constructor
+    /**
+     * Durch Sport verbrannte Kalorien.
+     *
+     * Diese erhöhen das verfügbare Tagesbudget.
+     */
+    private final IntegerProperty burned =
+            new SimpleIntegerProperty(0);
+
+
+    // -------------------------
+    // CONSTRUCTOR
+    // -------------------------
+
     public CaloriesTracker(int dailyLimit) {
-        this.dailyLimit = new SimpleIntegerProperty(dailyLimit);
+        this.dailyLimit =
+                new SimpleIntegerProperty(dailyLimit);
     }
 
-    // getters and setters
 
+    // -------------------------
+    // GETTERS
+    // -------------------------
 
     public IntegerProperty getDailyLimit() {
         return dailyLimit;
     }
-    public IntegerProperty getConsumed(){return consumed;}
 
-    // methods
-    public void addCalories(int calories) {
+    public IntegerProperty getConsumed() {
+        return consumed;
+    }
+
+    public IntegerProperty getBurned() {
+        return burned;
+    }
+
+
+    // -------------------------
+    // BURNED CALORIES
+    // -------------------------
+
+    /**
+     * Setzt die heute verbrannten Kalorien.
+     *
+     * @param calories darf nicht negativ sein
+     */
+    public void setBurned(int calories) {
+
         if (calories < 0) {
             throw new NegativeCaloriesException();
         }
-        if (consumed.get() + calories > dailyLimit.get()) {
-            throw new CalorieLimitExceededException();
-        }
-        consumed.set(consumed.get() + calories);
+
+        burned.set(calories);
     }
 
+
+    // -------------------------
+    // ADD CALORIES
+    // -------------------------
+
+    /**
+     * Fügt gegessene Kalorien hinzu.
+     *
+     * Eine Überschreitung des Tagesziels ist erlaubt.
+     * Dadurch kann der Controller erkennen, wann das
+     * Kalorienziel überschritten wurde.
+     */
+    public void addCalories(int calories) {
+
+        if (calories < 0) {
+            throw new NegativeCaloriesException();
+        }
+
+        consumed.set(
+                consumed.get() + calories
+        );
+    }
+
+
+    // -------------------------
+    // RESET
+    // -------------------------
+
+    /**
+     * Setzt die gegessenen Kalorien auf 0 zurück.
+     */
     public void reset() {
         consumed.set(0);
     }
 
+
+    // -------------------------
+    // REMAINING CALORIES
+    // -------------------------
+
+    /**
+     * Berechnet die verbleibenden Kalorien.
+     *
+     * Formel:
+     *
+     * dailyLimit - consumed + burned
+     *
+     * Wenn das Ergebnis negativ wird,
+     * wurde das Kalorienlimit überschritten.
+     */
     public IntegerBinding remainingCaloriesProperty() {
-        return (IntegerBinding) dailyLimit.subtract(consumed);
+
+        return Bindings.createIntegerBinding(
+                () -> dailyLimit.get()
+                        - consumed.get()
+                        + burned.get(),
+
+                dailyLimit,
+                consumed,
+                burned
+        );
     }
 }

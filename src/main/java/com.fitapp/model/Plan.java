@@ -37,6 +37,9 @@ public class Plan {
         this.days = (days != null)
                 ? days
                 : new ArrayList<>();
+
+        // Bereits vorhandene Tage direkt sortieren
+        sortDays();
     }
 
 
@@ -72,7 +75,11 @@ public class Plan {
     public void addDay(PlanDay day) {
 
         if (day != null) {
+
             days.add(day);
+
+            // Nach jedem Hinzufügen automatisch sortieren
+            sortDays();
         }
     }
 
@@ -97,6 +104,64 @@ public class Plan {
                         day.getDayName()
                                 .equalsIgnoreCase(dayName)
         );
+    }
+
+
+    // -------------------------
+    // SORT DAYS
+    // -------------------------
+
+    /**
+     * Sortiert die Trainingstage automatisch von
+     * Montag bis Sonntag.
+     */
+    private void sortDays() {
+
+        days.sort(
+                (day1, day2) ->
+                        Integer.compare(
+                                getDayOrder(day1.getDayName()),
+                                getDayOrder(day2.getDayName())
+                        )
+        );
+    }
+
+
+    /**
+     * Gibt jedem Wochentag eine feste Reihenfolge.
+     */
+    private int getDayOrder(String dayName) {
+
+        if (dayName == null) {
+            return 99;
+        }
+
+        switch (dayName.toLowerCase()) {
+
+            case "montag":
+                return 1;
+
+            case "dienstag":
+                return 2;
+
+            case "mittwoch":
+                return 3;
+
+            case "donnerstag":
+                return 4;
+
+            case "freitag":
+                return 5;
+
+            case "samstag":
+                return 6;
+
+            case "sonntag":
+                return 7;
+
+            default:
+                return 99;
+        }
     }
 
 

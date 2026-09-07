@@ -1,18 +1,20 @@
 package com.fitapp.controller;
 
-import com.fitapp.model.CardioCalisthenicsExercise;
-import com.fitapp.model.CardioRunningExercise;
-import com.fitapp.model.Exercise;
-import com.fitapp.model.ExerciseService;
-import com.fitapp.model.WeightExercise;
+import com.fitapp.model.*;
 import com.fitapp.navigation.Navigator;
 
 import javafx.collections.FXCollections;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
+import com.fitapp.util.BackgroundImageHelper;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+
+
 
 import java.util.Date;
 
@@ -30,6 +32,11 @@ public class ExerciseController implements Controller {
     // -------------------------
     // GENERAL FIELDS
     // -------------------------
+    @FXML
+    private StackPane rootPane;
+
+    @FXML
+    private ImageView backgroundImage;
 
     @FXML
     private TextField exerciseNameField;
@@ -120,6 +127,10 @@ public class ExerciseController implements Controller {
     @FXML
     public void initialize() {
 
+        BackgroundImageHelper.setup(
+                rootPane,
+                backgroundImage
+        );
         exerciseCategory.setItems(
                 FXCollections.observableArrayList(
                         "WEIGHT",
@@ -169,6 +180,10 @@ public class ExerciseController implements Controller {
 
     @FXML
     public void handleCreateExercise() {
+        if (!Session.isLoggedIn()) {
+            showAlert(Alert.AlertType.ERROR, "Not logged in", "Please log in first.");
+            return;
+        }
 
         String name =
                 exerciseNameField.getText().trim();
@@ -308,8 +323,8 @@ public class ExerciseController implements Controller {
 
 
                 if (weight <= 0
-                        || repetition <= 0
-                        || muscleGroup.isEmpty()) {
+                    || repetition <= 0
+                    || muscleGroup.isEmpty()) {
 
                     showAlert(
                             Alert.AlertType.WARNING,
@@ -322,7 +337,7 @@ public class ExerciseController implements Controller {
 
 
                 exercise = new WeightExercise(
-                        exerciseService.getNextId(),
+                        0,
                         name,
                         "",
                         new Date(),
@@ -379,8 +394,8 @@ public class ExerciseController implements Controller {
 
 
                 if (distance <= 0
-                        || speed <= 0
-                        || steps < 0) {
+                    || speed <= 0
+                    || steps < 0) {
 
                     showAlert(
                             Alert.AlertType.WARNING,
@@ -393,7 +408,7 @@ public class ExerciseController implements Controller {
 
 
                 exercise = new CardioRunningExercise(
-                        exerciseService.getNextId(),
+                        0,
                         name,
                         "",
                         new Date(),
@@ -450,8 +465,8 @@ public class ExerciseController implements Controller {
 
 
                 if (interval <= 0
-                        || exercisesPerRound <= 0
-                        || rounds <= 0) {
+                    || exercisesPerRound <= 0
+                    || rounds <= 0) {
 
                     showAlert(
                             Alert.AlertType.WARNING,
@@ -465,7 +480,7 @@ public class ExerciseController implements Controller {
 
                 exercise =
                         new CardioCalisthenicsExercise(
-                                exerciseService.getNextId(),
+                                0,
                                 name,
                                 "",
                                 new Date(),
@@ -495,81 +510,38 @@ public class ExerciseController implements Controller {
         // SAVE EXERCISE
         // =====================================================
 
-        exerciseService.addExercise(exercise);
+        Exercise toSave = exercise;
+        int userId = Session.getUserId();
 
+        Task<Exercise> task = new Task<>() {
+            @Override
+            protected Exercise call() throws Exception {
+                return exerciseService.addExercise(userId, toSave);
+            }
+        };
 
-        // -------------------------
-        // DEBUG OUTPUT
-        // -------------------------
+        task.setOnSucceeded(event -> {
+            Exercise saved = task.getValue();
 
-        System.out.println(
-                "================================="
-        );
+            showAlert(
+                    Alert.AlertType.INFORMATION,
+                    "Exercise created",
+                    "Exercise \"" + saved.getName() + "\" was saved (id " + saved.getId() + ")."
+            );
 
-        System.out.println(
-                "Exercise created:"
-        );
+            clearFields();
+        });
 
-        System.out.println(
-                "ID: "
-                        + exercise.getId()
-        );
+        task.setOnFailed(event -> showAlert(
+                Alert.AlertType.ERROR,
+                "Database error",
+                "The exercise could not be saved."
+        ));
 
-        System.out.println(
-                "Name: "
-                        + exercise.getName()
-        );
+        Thread thread = new Thread(task);
+        thread.setDaemon(true);
+        thread.start();
 
-        System.out.println(
-                "Type: "
-                        + category
-        );
-
-        System.out.println(
-                "Difficulty: "
-                        + exercise.getDifficulty()
-        );
-
-        System.out.println(
-                "Duration: "
-                        + exercise.getDuration()
-        );
-
-        System.out.println(
-                "Calories/hour: "
-                        + exercise.getCalories()
-        );
-
-        System.out.println(
-                "Stored exercises: "
-                        + exerciseService
-                        .getAllExercises()
-                        .size()
-        );
-
-        System.out.println(
-                "================================="
-        );
-
-
-        // -------------------------
-        // SUCCESS MESSAGE
-        // -------------------------
-
-        showAlert(
-                Alert.AlertType.INFORMATION,
-                "Exercise created",
-                "Exercise \""
-                        + exercise.getName()
-                        + "\" was created successfully."
-        );
-
-
-        // -------------------------
-        // CLEAR FIELDS
-        // -------------------------
-
-        clearFields();
     }
 
 

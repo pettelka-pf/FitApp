@@ -1,5 +1,13 @@
 # StepCounter – Umsetzung
 
+> **Hinweis (Stand nach dem Merge mit `main`):**
+> Dieser Text beschreibt den ersten Entwurf mit einer CSV-Datei.
+> Beim Zusammenführen mit `main` wurde der Step Counter von `main` übernommen
+> (Speicherung in der Datenbank). `StepCsv`, `StepEntry` und `steps.csv` sind
+> weg. Geblieben ist nur die **Statistik-Seite**; sie liest die Schritte jetzt
+> aus der Tabelle `steps`.
+
+
 Kurzbeschreibung aller Dateien, die fuer den **Step Counter** und die
 **StepCounter-Statistik** angelegt oder geaendert wurden. Fremde Bereiche
 (Uebungen, Plaene, Kalorien, Datenbank, `StepTracker.java`) wurden **nicht**

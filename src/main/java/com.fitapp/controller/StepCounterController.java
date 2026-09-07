@@ -1,282 +1,610 @@
 package com.fitapp.controller;
 
-import com.fitapp.model.Session;
-import com.fitapp.model.StepCsv;
-import com.fitapp.model.StepEntry;
+import com.fitapp.model.*;
 import com.fitapp.navigation.Navigator;
+import com.fitapp.util.BackgroundImageHelper;
+
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.VBox;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.StackPane;
 
 import java.time.LocalDate;
-import java.time.YearMonth;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
 
-/**
- * Christian: Step-Counter-Seite mit drei Spalten.
- * LINKS  - Rechner: aus Gewicht und Zeitraum das noetige Tagesziel (Soll).
- * MITTE  - Schritte fuer einen Tag eintragen (Ist).
- * RECHTS - Monatsuebersicht: Soll gegen Ist, Monat waehlbar.
- */
+
 public class StepCounterController implements Controller {
 
+    // -------------------------
+    // NAVIGATION
+    // -------------------------
+
     private Navigator navigator;
+
+    private static final int DEFAULT_STEP_GOAL = 10000;
+
+    // true, solange initialize() noch aus der Datenbank liest.
+    private boolean loading = true;
+
 
     @Override
     public void setNavigator(Navigator navigator) {
         this.navigator = navigator;
     }
 
+
     @Override
     public void changeView(String fxmlFile) {
         navigator.changeView(fxmlFile);
     }
 
-    // Christian: zuletzt berechnetes Schrittziel. 0 = noch nicht berechnet.
-    private long sollSchritte = 0;
 
-    // Christian: Felder der linken Spalte (Rechner).
-    @FXML private Label userNameLabel;
-    @FXML private TextField currentWeightField;
-    @FXML private TextField targetWeightField;
-    @FXML private DatePicker startDatePicker;
-    @FXML private DatePicker endDatePicker;
-    @FXML private Label tageLabel;
-    @FXML private Label calcResultLabel;
+    // -------------------------
+    // MODEL
+    // -------------------------
 
-    // Christian: Felder der mittleren Spalte (Eintragen).
-    @FXML private DatePicker datumPicker;
-    @FXML private Label sollLabel;
-    @FXML private TextField erreichteSchritteField;
-    @FXML private Label saveInfoLabel;
+    private StepTracker stepTracker;
 
-    // Christian: Felder der rechten Spalte (Uebersicht).
-    @FXML private Label uebersichtBenutzerLabel;
-    @FXML private ComboBox<String> monatBox;
-    @FXML private VBox uebersichtBox;
-    @FXML private Label uebersichtSummeLabel;
+    private final StepRepository stepDB = new StepDatabase();
 
-    // Christian: laeuft automatisch nach dem Laden der FXML.
+
+    // -------------------------
+    // FXML FIELDS
+    // -------------------------
+
+    @FXML
+    private StackPane rootPane;
+
+    @FXML
+    private ImageView backgroundImage;
+
+    @FXML
+    private TextField goalField;
+
+    @FXML
+    private TextField stepsField;
+
+    @FXML
+    private TextField remainingField;
+
+    @FXML
+    private Label stepOverflowLabel;
+
+
+    // -------------------------
+    // INITIALIZE
+    // -------------------------
+
+    /**
+     * Lädt das Ziel und die heute bereits gelaufenen
+     * Schritte aus der Datenbank.
+     */
     @FXML
     public void initialize() {
-        userNameLabel.setText("Angemeldet: " + Session.getUser());
-        uebersichtBenutzerLabel.setText("Benutzer: " + Session.getUser());
 
-        // Christian: Datumsfelder auf heute setzen.
-        startDatePicker.setValue(LocalDate.now());
-        datumPicker.setValue(LocalDate.now());
+        // Hintergrundbild an Fenstergröße anpassen.
+        BackgroundImageHelper.setup(
+                rootPane,
+                backgroundImage
+        );
 
-        sollLabel.setText("noch nicht berechnet");
-        tageLabel.setText("0 Tage");
+        stepOverflowLabel.setVisible(false);
 
-        // Christian: letzte 12 Monate in die Auswahl.
-        YearMonth jetzt = YearMonth.now();
-        for (int i = 0; i < 12; i++) {
-            monatBox.getItems().add(jetzt.minusMonths(i).toString());
-        }
-        monatBox.setValue(jetzt.toString());
+        if (!Session.isLoggedIn()) {
 
-        zeigeTag();
-        aktualisiereUebersicht();
-    }
+            showMessage("No user logged in.");
 
-    // Christian: Datum in der Mitte gewechselt -> gespeicherte Schritte anzeigen.
-    @FXML
-    public void handleTagWechsel() {
-        zeigeTag();
-    }
+            loading = false;
 
-    // Christian: einen Tag weiter springen.
-    @FXML
-    public void handleNextDay() {
-        LocalDate aktuell = datumPicker.getValue();
-        if (aktuell == null) {
-            aktuell = LocalDate.now();
-        }
-        datumPicker.setValue(aktuell.plusDays(1));
-        zeigeTag();
-    }
-
-    // Christian: gespeicherte Schritte fuer das Datum ins Feld holen (sonst leer).
-    private void zeigeTag() {
-        LocalDate datum = datumPicker.getValue();
-        if (datum == null) {
             return;
         }
-        int gespeichert = StepCsv.schritteFuer(Session.getUser(), datum);
-        if (gespeichert > 0) {
-            erreichteSchritteField.setText(String.valueOf(gespeichert));
-        } else {
-            erreichteSchritteField.clear();
-        }
+
+        int userId = Session.getUserId();
+        LocalDate today = LocalDate.now();
+
+        Task<int[]> task = new Task<>() {
+
+            @Override
+            protected int[] call() throws Exception {
+
+                return new int[]{
+                        stepDB.getGoal(userId),
+                        stepDB.getStepsToday(userId, today)
+                };
+            }
+        };
+
+
+        task.setOnSucceeded(event -> {
+
+            int[] values = task.getValue();
+
+            restoreTracker(
+                    values[0],
+                    values[1]
+            );
+
+            loading = false;
+        });
+
+
+        task.setOnFailed(event -> {
+
+            showMessage(
+                    "Could not load saved data."
+            );
+
+            loading = false;
+        });
+
+
+        runInBackground(task);
     }
 
-    // Christian: Start- oder Enddatum geaendert -> Anzahl Tage anzeigen.
-    @FXML
-    public void handleDatumWechsel() {
-        LocalDate start = startDatePicker.getValue();
-        LocalDate ende = endDatePicker.getValue();
-        if (start != null && ende != null) {
-            long tage = ChronoUnit.DAYS.between(start, ende);
-            tageLabel.setText(tage + " Tage");
-        }
+
+    // -------------------------
+    // RESTORE TRACKER
+    // -------------------------
+
+    /**
+     * Stellt den StepTracker mit den gespeicherten
+     * Werten wieder her.
+     */
+    private void restoreTracker(
+            int goal,
+            int steps
+    ) {
+
+        stepTracker = new StepTracker(
+                goal > 0
+                        ? goal
+                        : DEFAULT_STEP_GOAL
+        );
+
+        stepTracker.setSteps(steps);
+
+        bindRemaining();
+
+        goalField.setPromptText(
+                "Current goal: "
+                        + stepTracker
+                        .getDailyGoal()
+                        .get()
+        );
+
+        /*
+         * Nach dem Laden direkt den aktuellen Zustand
+         * anzeigen.
+         *
+         * Das ist wichtig, falls das Ziel bereits
+         * erreicht oder überschritten wurde.
+         */
+        updateRemainingFieldColor();
+        updateStepOverflowMessage();
     }
 
-    // Christian: LINKS - noetiges Schrittziel berechnen.
+
+    // -------------------------
+    // SET GOAL
+    // -------------------------
+
     @FXML
-    public void handleCalcSteps() {
+    public void handleSetGoal(ActionEvent event) {
+
+        if (loading) {
+
+            showMessage(
+                    "Loading, please wait..."
+            );
+
+            return;
+        }
+
+
         try {
-            double aktuell = Double.parseDouble(currentWeightField.getText());
-            double wunsch = Double.parseDouble(targetWeightField.getText());
 
-            LocalDate start = startDatePicker.getValue();
-            LocalDate ende = endDatePicker.getValue();
-            if (start == null || ende == null) {
-                calcResultLabel.setText("Bitte Start- und Enddatum waehlen.");
+            int goal = Integer.parseInt(
+                    goalField.getText()
+            );
+
+
+            if (goal <= 0) {
+
+                showMessage(
+                        "Step goal must be greater than 0."
+                );
+
                 return;
             }
 
-            long tage = ChronoUnit.DAYS.between(start, ende);
-            tageLabel.setText(tage + " Tage");
 
-            double abzunehmen = aktuell - wunsch; // kg
+            if (stepTracker == null) {
 
-            if (abzunehmen <= 0 || tage <= 0) {
-                calcResultLabel.setText(
-                        "Bitte Wunschgewicht kleiner als aktuelles Gewicht "
-                        + "und ein Enddatum nach dem Startdatum waehlen.");
-                return;
+                stepTracker = new StepTracker(goal);
+
+                bindRemaining();
+
+            } else {
+
+                /*
+                 * Nur das Ziel ändern.
+                 *
+                 * Die bereits gelaufenen Schritte
+                 * bleiben erhalten.
+                 */
+                stepTracker
+                        .getDailyGoal()
+                        .set(goal);
             }
 
-            // Christian: 1 kg Fett = ca. 7000 kcal.
-            double gesamtDefizit = abzunehmen * 7000.0;
 
-            // Christian: noetiges Defizit pro Tag.
-            double defizitProTag = gesamtDefizit / tage;
+            /*
+             * Farbe nach Änderung des Ziels
+             * aktualisieren.
+             */
+            updateRemainingFieldColor();
 
-            // Christian: kcal pro Schritt, grob aus dem Gewicht.
-            // 10.000 Schritte ~ Gewicht * 5,8 kcal.
-            double kcalProSchritt = aktuell * 5.8 / 10000.0;
 
-            sollSchritte = Math.round(defizitProTag / kcalProSchritt);
+            /*
+             * Prüfen, ob die bereits gelaufenen
+             * Schritte das neue Ziel überschreiten.
+             */
+            updateStepOverflowMessage();
 
-            calcResultLabel.setText("ca. " + sollSchritte + " Schritte pro Tag");
-            sollLabel.setText(sollSchritte + " Schritte");
-            aktualisiereUebersicht();
+
+            // Ziel speichern.
+            persist(
+                    () -> stepDB.setGoal(
+                            Session.getUserId(),
+                            goal
+                    ),
+                    "Could not save the goal."
+            );
 
         } catch (NumberFormatException e) {
-            calcResultLabel.setText("Bitte fuer Gewicht Zahlen eingeben.");
+
+            showMessage(
+                    "Please enter a valid step goal."
+            );
         }
     }
 
-    // Christian: MITTE - erreichte Schritte fuer einen Tag speichern.
+
+    // -------------------------
+    // ADD STEPS
+    // -------------------------
+
     @FXML
-    public void handleSaveSteps() {
+    public void handleAddingSteps() {
+
+        if (loading) {
+
+            showMessage(
+                    "Loading, please wait..."
+            );
+
+            return;
+        }
+
+
+        if (stepTracker == null) {
+
+            showMessage(
+                    "Please set a goal first."
+            );
+
+            return;
+        }
+
+
         try {
-            int erreicht = Integer.parseInt(erreichteSchritteField.getText());
 
-            if (erreicht < 0) {
-                saveInfoLabel.setText("Schritte duerfen nicht negativ sein.");
-                return;
-            }
+            int steps = Integer.parseInt(
+                    stepsField.getText()
+            );
 
-            LocalDate datum = datumPicker.getValue();
-            if (datum == null) {
-                saveInfoLabel.setText("Bitte ein Datum waehlen.");
-                return;
-            }
 
-            // Christian: in steps.csv speichern, Eintrag vom selben Tag wird ersetzt.
-            StepCsv.saveOrReplace(new StepEntry(
-                    Session.getUser(),
-                    datum,
-                    erreicht,
-                    (int) sollSchritte));
+            /*
+             * Schritte hinzufügen.
+             *
+             * Das Ziel stellt KEINE Obergrenze dar.
+             * Es kann also beliebig weitergezählt werden.
+             */
+            stepTracker.addSteps(steps);
 
-            saveInfoLabel.setText("Gespeichert: " + erreicht
-                    + " Schritte am " + datum + ".");
 
-            aktualisiereUebersicht();
+            // Eingabefeld leeren.
+            stepsField.clear();
+
+
+            /*
+             * Remaining-Feld aktualisieren.
+             *
+             * Unter Ziel:
+             *      ROT
+             *
+             * Ziel erreicht:
+             *      GRÜN
+             *
+             * Ziel überschritten:
+             *      GRÜN
+             */
+            updateRemainingFieldColor();
+
+
+            /*
+             * Meldung aktualisieren.
+             *
+             * Sobald die tatsächliche Schrittzahl
+             * größer als das Ziel ist, wird die
+             * Meldung mit der tatsächlichen
+             * Schrittzahl angezeigt.
+             */
+            updateStepOverflowMessage();
+
+
+            // Schritte speichern.
+            persist(
+                    () -> stepDB.addSteps(
+                            Session.getUserId(),
+                            steps,
+                            LocalDate.now()
+                    ),
+                    "Could not save the entry."
+            );
+
+        } catch (NegativeStepsException e) {
+
+            showMessage(
+                    "Steps must be a positive number!"
+            );
 
         } catch (NumberFormatException e) {
-            saveInfoLabel.setText("Bitte eine Zahl eingeben.");
+
+            showMessage(
+                    "Please enter a valid number."
+            );
         }
     }
 
-    // Christian: Eintrag fuer das gewaehlte Datum loeschen.
+
+    // -------------------------
+    // RESET
+    // -------------------------
+
     @FXML
-    public void handleResetTag() {
-        LocalDate datum = datumPicker.getValue();
-        if (datum == null) {
-            saveInfoLabel.setText("Bitte ein Datum waehlen.");
+    public void handleReset(ActionEvent event) {
+
+        if (loading) {
+
+            showMessage(
+                    "Loading, please wait..."
+            );
+
             return;
         }
-        StepCsv.delete(Session.getUser(), datum);
-        erreichteSchritteField.clear();
-        saveInfoLabel.setText("Eintrag fuer " + datum + " zurueckgesetzt.");
-        aktualisiereUebersicht();
-    }
 
-    // Christian: anderer Monat gewaehlt -> Uebersicht neu aufbauen.
-    @FXML
-    public void handleMonatWechsel() {
-        aktualisiereUebersicht();
-    }
 
-    // Christian: RECHTS - Monatsuebersicht Soll gegen Ist aufbauen.
-    private void aktualisiereUebersicht() {
-        String user = Session.getUser();
-        List<StepEntry> alle = StepCsv.readAll();
+        if (stepTracker != null) {
 
-        uebersichtBox.getChildren().clear();
-
-        String monatText = monatBox.getValue();
-        if (monatText == null) {
-            return;
-        }
-        YearMonth monat = YearMonth.parse(monatText);
-
-        long summeSoll = 0;
-        long summeIst = 0;
-
-        // Christian: jeden Tag des Monats durchgehen.
-        for (int tagNr = 1; tagNr <= monat.lengthOfMonth(); tagNr++) {
-            LocalDate tag = monat.atDay(tagNr);
-
-            int ist = 0;
-            int gespeichertesSoll = 0;
-
-            for (StepEntry e : alle) {
-                if (e.username.equals(user) && e.datum.equals(tag)) {
-                    ist += e.schritte;
-                    gespeichertesSoll = e.ziel;
-                }
-            }
-
-            // Christian: Soll aus der Berechnung, sonst das gespeicherte Soll.
-            long soll = (sollSchritte > 0) ? sollSchritte : gespeichertesSoll;
-
-            summeSoll += soll;
-            summeIst += ist;
-
-            String haken = (soll > 0 && ist >= soll) ? "   OK" : "";
-            Label zeile = new Label(
-                    tag + "    Soll: " + soll + "    Ist: " + ist + haken);
-            uebersichtBox.getChildren().add(zeile);
+            stepTracker.reset();
         }
 
-        uebersichtSummeLabel.setText("Monat gesamt  ->  Soll: " + summeSoll
-                + "    Ist: " + summeIst);
+
+        stepsField.setText("");
+
+
+        /*
+         * Nach dem Reset:
+         *
+         * Remaining = Ziel
+         * Farbe = ROT
+         * Meldung = aus
+         */
+        updateRemainingFieldColor();
+
+        updateStepOverflowMessage();
+
+
+        // Datenbank ebenfalls zurücksetzen.
+        persist(
+                () -> stepDB.resetSteps(
+                        Session.getUserId(),
+                        LocalDate.now()
+                ),
+                "Could not reset the entries."
+        );
     }
 
-    // Christian: zurueck ins Hauptmenue.
+
+    // -------------------------
+    // BACK TO MENU
+    // -------------------------
+
     @FXML
     public void handleBackToMenu(ActionEvent event) {
+
         changeView("mainMenu.fxml");
+    }
+
+
+    // -------------------------
+    // REMAINING STEPS
+    // -------------------------
+
+    /**
+     * Bindet die Anzeige der verbleibenden Schritte.
+     *
+     * Der StepTracker sorgt dafür, dass die Anzeige
+     * bei 0 stehen bleibt, sobald das Ziel erreicht
+     * wurde.
+     */
+    private void bindRemaining() {
+
+        remainingField.textProperty().bind(
+                stepTracker
+                        .remainingStepsProperty()
+                        .asString()
+        );
+    }
+
+
+    /**
+     * Ändert die Hintergrundfarbe des Remaining-Feldes.
+     *
+     * remaining > 0:
+     *     Ziel noch nicht erreicht -> ROT
+     *
+     * remaining == 0:
+     *     Ziel erreicht -> GRÜN
+     *
+     * Da remainingSteps im StepTracker auf mindestens
+     * 0 begrenzt wird, bleibt das Feld auch bei einer
+     * Überschreitung GRÜN.
+     */
+    private void updateRemainingFieldColor() {
+
+        if (stepTracker == null) {
+            return;
+        }
+
+
+        int remaining =
+                stepTracker
+                        .remainingStepsProperty()
+                        .get();
+
+
+        if (remaining > 0) {
+
+            // Ziel noch nicht erreicht.
+            remainingField.setStyle(
+                    "-fx-control-inner-background: #FF7F7F;" +
+                            "-fx-text-fill: black;"
+            );
+
+        } else {
+
+            // Ziel erreicht oder überschritten.
+            remainingField.setStyle(
+                    "-fx-control-inner-background: #90EE90;" +
+                            "-fx-text-fill: black;"
+            );
+        }
+    }
+
+
+    // -------------------------
+    // STEP OVERFLOW MESSAGE
+    // -------------------------
+
+    /**
+     * Zeigt eine Meldung an, sobald das Schrittziel
+     * überschritten wurde.
+     *
+     * Anders als remainingStepsProperty() verwenden
+     * wir hier currentStepsProperty(), weil das
+     * Remaining-Feld bei 0 bleiben soll.
+     *
+     * Dadurch kennen wir weiterhin die tatsächliche
+     * Anzahl der gelaufenen Schritte.
+     */
+    private void updateStepOverflowMessage() {
+
+        if (stepTracker == null) {
+            return;
+        }
+
+
+        int currentSteps =
+                stepTracker
+                        .currentStepsProperty()
+                        .get();
+
+        int goal =
+                stepTracker
+                        .getDailyGoal()
+                        .get();
+
+
+        if (currentSteps > goal) {
+
+            stepOverflowLabel.setText(
+                    "Lot of Steps taken! You walked "
+                            + currentSteps
+                            + " steps today."
+            );
+
+            stepOverflowLabel.setVisible(true);
+
+        } else {
+
+            stepOverflowLabel.setVisible(false);
+        }
+    }
+
+
+    // -------------------------
+    // DATABASE / BACKGROUND
+    // -------------------------
+
+    private void persist(
+            DatabaseAction action,
+            String errorMessage
+    ) {
+
+        Task<Void> task = new Task<>() {
+
+            @Override
+            protected Void call() throws Exception {
+
+                action.run();
+
+                return null;
+            }
+        };
+
+
+        task.setOnFailed(event ->
+                showMessage(errorMessage)
+        );
+
+
+        runInBackground(task);
+    }
+
+
+    private void runInBackground(Task<?> task) {
+
+        Thread thread = new Thread(task);
+
+        thread.setDaemon(true);
+
+        thread.start();
+    }
+
+
+    // -------------------------
+    // ERROR MESSAGE
+    // -------------------------
+
+    private void showMessage(String message) {
+
+        stepOverflowLabel.setText(message);
+
+        stepOverflowLabel.setVisible(true);
+    }
+
+
+    // -------------------------
+    // DATABASE ACTION
+    // -------------------------
+
+    @FunctionalInterface
+    private interface DatabaseAction {
+
+        void run() throws Exception;
     }
 }

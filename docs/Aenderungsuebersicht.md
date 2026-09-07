@@ -1,5 +1,13 @@
 # Übersicht aller Änderungen
 
+> **Hinweis (Stand nach dem Merge mit `main`):**
+> Dieser Text beschreibt den ersten Entwurf mit einer CSV-Datei.
+> Beim Zusammenführen mit `main` wurde der Step Counter von `main` übernommen
+> (er speichert in der Datenbank). `StepCsv`, `StepEntry` und `steps.csv` sind
+> weg. Geblieben ist nur die **Statistik-Seite**; sie liest die Schritte jetzt
+> aus der Tabelle `steps` statt aus der CSV-Datei.
+
+
 Alle Änderungen betreffen **nur** den Step Counter und die StepCounter-Statistik.
 Frische Kopie geklont aus `https://github.com/pettelkr/FitApp.git`, Branch `testing`
 (HEAD `511a467`).

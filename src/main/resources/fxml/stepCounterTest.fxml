@@ -5,145 +5,65 @@
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
 
-<!-- Christian: Layout der Step-Counter-Seite (3 Spalten). Controller: StepCounterController. -->
-<StackPane xmlns="http://javafx.com/javafx"
+<StackPane fx:id="rootPane"
+           xmlns="http://javafx.com/javafx"
            xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="com.fitapp.controller.StepCounterController">
 
-    <!-- Christian: breites Hintergrundbild fuer drei Spalten. -->
-    <ImageView fitWidth="1000"
-               fitHeight="720"
-               preserveRatio="false"
-               opacity="0.9">
+    <!-- Background image -->
+    <ImageView fx:id="backgroundImage"
+               preserveRatio="true"
+               smooth="true"
+               opacity="0.9"
+               pickOnBounds="false">
         <image>
             <Image url="@/images/stepcounter-image.png" />
         </image>
     </ImageView>
 
-    <!-- Christian: drei Karten nebeneinander. -->
-    <HBox spacing="16" alignment="CENTER" style="-fx-padding: 12;">
+    <!-- Caloric intake card -->
+    <VBox spacing="15"
+          alignment="CENTER"
+          maxWidth="320"
+          style="-fx-background-color: rgba(255,255,255,0.85);
+                 -fx-background-radius: 12;
+                 -fx-padding: 25;">
 
-        <!-- Christian: LINKS - Schrittzahlrechner. -->
-        <VBox spacing="5"
-              alignment="TOP_LEFT"
-              prefWidth="300"
-              maxWidth="300"
-              style="-fx-background-color: rgba(255,255,255,0.88);
-                     -fx-background-radius: 12;
-                     -fx-padding: 16;">
+        <TextField fx:id="goalField" promptText="Set daily step goal"/>
+        <Button text="Set Goal" onAction="#handleSetGoal"/>
 
-            <!-- Christian: angemeldeter Benutzer, oben links. -->
-            <Label fx:id="userNameLabel" style="-fx-font-weight: bold;" />
+        <Label text="STEP COUNTER"
+               style="-fx-font-size: 20px; -fx-font-weight: bold;" />
 
-            <Label text="Schrittzahlrechner"
-                   style="-fx-font-size: 16px; -fx-font-weight: bold;" />
-            <Label wrapText="true"
-                   text="So viele Schritte pro Tag brauchst du, um dein Wunschgewicht zu erreichen." />
+        <TextField fx:id="stepsField"
+                   promptText="Steps done"
+                   maxWidth="Infinity" />
 
-            <Label text="Aktuelles Gewicht (kg)" />
-            <TextField fx:id="currentWeightField" promptText="z. B. 90" maxWidth="Infinity" />
+        <Button text="Add Steps"
+                maxWidth="Infinity"
+                style="-fx-font-size: 14px;"
+                onAction="#handleAddingSteps" />
 
-            <Label text="Wunschgewicht (kg)" />
-            <TextField fx:id="targetWeightField" promptText="z. B. 80" maxWidth="Infinity" />
+        <TextField fx:id="remainingField"
+                   promptText="Remaining Steps"
+                   editable="false"
+                   maxWidth="Infinity" />
 
-            <Label text="Startdatum" />
-            <DatePicker fx:id="startDatePicker" maxWidth="Infinity" onAction="#handleDatumWechsel" />
+        <Label fx:id="stepOverflowLabel"
+               text="Lot of Steps taken!"
+               textFill="RED"
+               visible="false" />
 
-            <Label text="Enddatum" />
-            <DatePicker fx:id="endDatePicker" maxWidth="Infinity" onAction="#handleDatumWechsel" />
+        <Button text="Reset Steps"
+                maxWidth="Infinity"
+                style="-fx-font-size: 14px;"
+                onAction="#handleReset" />
 
-            <Label text="Anzahl der Tage" />
-            <Label fx:id="tageLabel" />
+        <Button text="Back to Menu"
+                maxWidth="Infinity"
+                style="-fx-font-size: 14px;"
+                onAction="#handleBackToMenu" />
 
-            <Button text="Schrittziel berechnen"
-                    maxWidth="Infinity"
-                    onAction="#handleCalcSteps" />
-
-            <Label text="Noetige Schritte pro Tag" />
-            <Label fx:id="calcResultLabel" wrapText="true"
-                   style="-fx-font-weight: bold;" />
-
-            <Separator />
-
-            <Label text="Orientierung: 10.000 Schritte"
-                   style="-fx-font-weight: bold;" />
-            <Label text="leicht  (ca.  60 kg):  330 - 370 kcal" />
-            <Label text="mittel  (ca.  80 kg):  400 - 490 kcal" />
-            <Label text="schwer  (ca. 100 kg):  550 - 615 kcal" />
-        </VBox>
-
-        <!-- Christian: MITTE - Schritte eintragen. -->
-        <VBox spacing="8"
-              alignment="TOP_LEFT"
-              prefWidth="300"
-              maxWidth="300"
-              style="-fx-background-color: rgba(255,255,255,0.88);
-                     -fx-background-radius: 12;
-                     -fx-padding: 16;">
-
-            <Label text="Schritte eintragen"
-                   style="-fx-font-size: 16px; -fx-font-weight: bold;" />
-
-            <Label text="Datum" />
-            <HBox spacing="6">
-                <DatePicker fx:id="datumPicker" HBox.hgrow="ALWAYS" maxWidth="Infinity"
-                            onAction="#handleTagWechsel" />
-                <Button text="Naechster Tag" onAction="#handleNextDay" />
-            </HBox>
-
-            <Label text="Soll: noetige Schritte pro Tag" />
-            <Label fx:id="sollLabel" style="-fx-font-weight: bold;" />
-
-            <Label text="Ist: an diesem Tag erreichte Schritte" />
-            <TextField fx:id="erreichteSchritteField"
-                       promptText="z. B. 8500" maxWidth="Infinity" />
-
-            <!-- Christian: speichern, ersetzt den Eintrag des Tages. -->
-            <Button text="Schritte speichern (ueberschreibt den Tag)"
-                    maxWidth="Infinity"
-                    onAction="#handleSaveSteps" />
-
-            <!-- Christian: Eintrag fuer das Datum loeschen. -->
-            <Button text="Tag zuruecksetzen"
-                    maxWidth="Infinity"
-                    onAction="#handleResetTag" />
-
-            <Label fx:id="saveInfoLabel" wrapText="true" />
-        </VBox>
-
-        <!-- Christian: RECHTS - Monatsuebersicht der Schritte. -->
-        <VBox spacing="8"
-              alignment="TOP_LEFT"
-              prefWidth="330"
-              maxWidth="330"
-              prefHeight="640"
-              style="-fx-background-color: rgba(255,255,255,0.88);
-                     -fx-background-radius: 12;
-                     -fx-padding: 16;">
-
-            <Label text="Uebersicht der Schritte"
-                   style="-fx-font-size: 16px; -fx-font-weight: bold;" />
-            <Label fx:id="uebersichtBenutzerLabel" />
-
-            <Label text="Monat" />
-            <ComboBox fx:id="monatBox" maxWidth="Infinity" onAction="#handleMonatWechsel" />
-
-            <ScrollPane fitToWidth="true"
-                        VBox.vgrow="ALWAYS"
-                        style="-fx-background-color: transparent;">
-                <VBox fx:id="uebersichtBox" spacing="4" />
-            </ScrollPane>
-
-            <Label fx:id="uebersichtSummeLabel" style="-fx-font-weight: bold;" />
-
-            <Separator />
-
-            <!-- Christian: zurueck ins Hauptmenue. -->
-            <Button text="Zurueck zum Menue"
-                    maxWidth="Infinity"
-                    onAction="#handleBackToMenu" />
-        </VBox>
-
-    </HBox>
+    </VBox>
 
 </StackPane>

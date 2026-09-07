@@ -1,90 +1,32 @@
 package com.fitapp.model;
 
-import java.util.ArrayList;
+import java.sql.SQLException;
 import java.util.List;
 
 public class ExerciseService {
 
-    // Liste mit allen erstellten Übungen
-    private static final List<Exercise> exercises = new ArrayList<>();
+    private final ExerciseRepository repository = new ExerciseDatabase();
 
-    // ID für neue Übungen
-    private static int nextId = 1;
-
-
-// -------------------------
-// ADD EXERCISE
-// -------------------------
-
-    public Exercise addExercise(Exercise exercise) {
-
+    /** Speichert die Uebung und liefert sie mit der von der DB vergebenen id zurueck. */
+    public Exercise addExercise(int userId, Exercise exercise) throws SQLException {
         if (exercise == null) {
             return null;
         }
-
-        exercises.add(exercise);
-
-        return exercise;
+        int id = repository.save(userId, exercise);
+        return repository.findByUser(userId).stream()
+                .filter(e -> e.getId() == id)
+                .findFirst()
+                .orElse(exercise);
     }
 
-
-// -------------------------
-// GET ALL EXERCISES
-// -------------------------
-
-    public List<Exercise> getAllExercises() {
-
-        return new ArrayList<>(exercises);
+    public List<Exercise> getAllExercises(int userId) throws SQLException {
+        return repository.findByUser(userId);
     }
 
-
-// -------------------------
-// GET NEXT ID
-// -------------------------
-
-    public int getNextId() {
-
-        return nextId++;
+    public Exercise getExerciseById(int userId, int id) throws SQLException {
+        return getAllExercises(userId).stream()
+                .filter(exercise -> exercise.getId() == id)
+                .findFirst()
+                .orElse(null);
     }
-
-
-// -------------------------
-// FIND EXERCISE BY ID
-// -------------------------
-
-    public Exercise getExerciseById(int id) {
-
-        for (Exercise exercise : exercises) {
-
-            if (exercise.getId() == id) {
-                return exercise;
-            }
-        }
-
-        return null;
-    }
-
-
-// -------------------------
-// REMOVE EXERCISE
-// -------------------------
-
-    public void removeExercise(int id) {
-
-        exercises.removeIf(exercise ->
-                exercise.getId() == id
-        );
-    }
-
-
-// -------------------------
-// CLEAR ALL EXERCISES
-// -------------------------
-
-    public void clearExercises() {
-
-        exercises.clear();
-    }
-
-
 }

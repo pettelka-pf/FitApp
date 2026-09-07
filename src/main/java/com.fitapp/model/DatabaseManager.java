@@ -2,10 +2,7 @@ package com.fitapp.model;
 
 import io.github.cdimascio.dotenv.Dotenv;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 
 /**
  * Singleton that manages the SQLite connection and schema initialization.
@@ -34,8 +31,8 @@ public class DatabaseManager {
      * @return the DatabaseManager instance
      * @throws SQLException if the connection cannot be established
      */
-    public static DatabaseManager getInstance() throws SQLException {
-        if (instance == null || instance.connection.isClosed()) {
+    public static synchronized DatabaseManager getInstance() throws SQLException {
+        if (instance == null || !instance.isConnectionUsable()) {
             instance = new DatabaseManager();
         }
         return instance;
@@ -49,16 +46,38 @@ public class DatabaseManager {
     public Connection getConnection() {
         return connection;
     }
+    public static synchronized void shutdown() {
+        if (instance != null) {
+            try {
+                if (!instance.connection.isClosed()) {
+                    instance.connection.close();
+                }
+            } catch (SQLException e) {
+                System.err.println("Closing DB connection failed: " + e.getMessage());
+            }
+            instance = null;
+        }
+    }
+
+    private boolean isConnectionUsable(){
+        try {
+            return connection != null && !connection.isClosed() &&connection.isValid(3);
+        }catch (SQLException e){
+            return false;
+        }
+    }
 
     private void initializeDatabase() throws SQLException {
         try (Statement stmt = connection.createStatement()) {
             // Users Tabelle (schon da)
             stmt.execute(
-                    "CREATE TABLE IF NOT EXISTS users ("
-                            + "id SERIAL PRIMARY KEY, "
-                            + "username TEXT NOT NULL UNIQUE, "
-                            + "password TEXT NOT NULL"
-                            + ")"
+                    """
+                      CREATE TABLE IF NOT EXISTS users (
+                      id SERIAL PRIMARY KEY,   
+                    username TEXT NOT NULL UNIQUE, 
+                    password TEXT NOT NULL,  
+                     daily_calorie_goal Integer default 2000
+                     )"""
             );
 
             // Exercises Tabelle
@@ -118,14 +137,38 @@ public class DatabaseManager {
                             + "date DATE"
                             + ")"
             );
+            stmt.execute(
+                    """
+                            Create table if not exists steps(
+                            id serial primary key,
+                            user_id integer References users(id),
+                            count integer not NULL,
+                            date Date                       
+                            )
+                            """
+            );
+            stmt.execute("Alter table users add column if not exists daily_calorie_goal integer Default 2000" );
+            stmt.execute("UPDATE users set daily_calorie_goal = 2000 where daily_calorie_goal is null" );
+            stmt.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_step_goal INTEGER DEFAULT 10000");
+            stmt.execute("UPDATE users SET daily_step_goal = 10000 WHERE daily_step_goal IS NULL");
+            stmt.execute("ALTER TABLE exercises ADD COLUMN IF NOT EXISTS calories_burned DOUBLE PRECISION DEFAULT 0");
             seedDefaultUsers(stmt);
         }
     }
 
     private void seedDefaultUsers(Statement stmt) throws SQLException {
-        stmt.execute("INSERT INTO users (username, password) VALUES ('Hasan', '1234') ON CONFLICT DO NOTHING");
-        stmt.execute("INSERT INTO users (username, password) VALUES ('John', '1234') ON CONFLICT DO NOTHING");
-        stmt.execute("INSERT INTO users (username, password) VALUES ('Rene', '1234') ON CONFLICT DO NOTHING");
-
+        String hashed = PasswordHasher.hash("1234");
+        String sql = "Insert into users(username, password) values (?, ?) on conflict do nothing";
+//        stmt.execute("INSERT INTO users (username, password) VALUES ('Hasan', '1234') ON CONFLICT DO NOTHING");
+//        stmt.execute("INSERT INTO users (username, password) VALUES ('John', '1234') ON CONFLICT DO NOTHING");
+//        stmt.execute("INSERT INTO users (username, password) VALUES ('Rene', '1234') ON CONFLICT DO NOTHING");
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)){
+            for(String username : new String[]{"Hasan", "John", "Rene"}){
+                preparedStatement.setString(1, username);
+                preparedStatement.setString(2, hashed);
+                preparedStatement.addBatch();
+            }
+            preparedStatement.executeBatch();
+        }
     }
 }

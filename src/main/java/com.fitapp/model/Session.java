@@ -1,21 +1,43 @@
 package com.fitapp.model;
 
 /**
- * Christian: Merkt sich den angemeldeten Benutzer.
- * "static" = gibt es nur einmal im Programm. Jede Seite kann den Namen fragen.
+ * Haelt den aktuell eingeloggten Benutzer fest, damit die Controller wissen,
+ * für wen sie Daten laden und speichern.
+ *
+ * Nur statische Felder: es gibt genau eine laufende Sitzung pro Programmstart.
  */
-public class Session {
+public final class Session {
 
-    // Christian: Name, solange sich niemand angemeldet hat.
-    private static String currentUser = "Gast";
+    /** Kein Benutzer eingeloggt. */
+    public static final int NO_USER = -1;
 
-    // Christian: Beim Login setzen.
-    public static void setUser(String name) {
-        currentUser = name;
+    private static int userId = NO_USER;
+    private static String username;
+
+    private Session() {
     }
 
-    // Christian: Name abfragen.
-    public static String getUser() {
-        return currentUser;
+    /** Wird nach erfolgreichem Login aufgerufen. */
+    public static void login(int id, String name) {
+        userId = id;
+        username = name;
+    }
+
+    /** Wird beim Logout aufgerufen, damit keine Daten hängen bleiben. */
+    public static void logout() {
+        userId = NO_USER;
+        username = null;
+    }
+
+    public static int getUserId() {
+        return userId;
+    }
+
+    public static String getUsername() {
+        return username;
+    }
+
+    public static boolean isLoggedIn() {
+        return userId != NO_USER;
     }
 }

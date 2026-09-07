@@ -5,7 +5,8 @@
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
 
-<StackPane xmlns="http://javafx.com/javafx"
+<StackPane fx:id="rootPane"
+           xmlns="http://javafx.com/javafx"
            xmlns:fx="http://javafx.com/fxml"
            fx:controller="com.fitapp.controller.PlanController">
 
@@ -13,10 +14,11 @@
     <!-- BACKGROUND                 -->
     <!-- ========================= -->
 
-    <ImageView fitWidth="1000"
-               fitHeight="800"
-               preserveRatio="false"
-               opacity="0.9">
+    <ImageView fx:id="backgroundImage"
+               preserveRatio="true"
+               smooth="true"
+               opacity="0.9"
+               pickOnBounds="false">
         <image>
             <Image url="@/images/trainingsplan_gross.png"/>
         </image>
@@ -217,6 +219,27 @@
                        text="Total calories: 0"/>
 
             </VBox>
+
+            <!-- ========================= -->
+            <!-- PLAN SWITCH BUTTON         -->
+            <!-- ========================= -->
+
+            <Label text="Choose your plan:"
+                   style="-fx-font-size: 14px;
+                          -fx-font-weight: bold;
+                          -fx-text-fill: #333333;"/>
+
+            <ComboBox fx:id="planSelector"
+                      promptText="no plan available"
+                      maxWidth="Infinity"
+                      onAction="#handlePlanSelection"/>
+
+            <Button text="Delete selected plan"
+                    onAction="#handleDeletePlan"
+                    maxWidth="Infinity"
+                    style="-fx-background-color: #e74c3c;
+               -fx-text-fill: white;
+               -fx-font-weight: bold;"/>
 
         </VBox>
 

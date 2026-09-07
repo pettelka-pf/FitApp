@@ -1,20 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
 
-<StackPane xmlns="http://javafx.com/javafx"
+<StackPane fx:id="rootPane"
+           xmlns="http://javafx.com/javafx"
            xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="com.fitapp.controller.MainMenuController">
 
     <!-- Background image -->
-    <ImageView fitWidth="800"
-               fitHeight="600"
-               preserveRatio="false"
-               opacity="0.9">
+    <ImageView fx:id="backgroundImage"
+               preserveRatio="true"
+               smooth="true"
+               opacity="0.9"
+               pickOnBounds="false">
         <image>
             <Image url="@/images/menu.jpg" />
         </image>
@@ -58,13 +59,16 @@
                 style="-fx-font-size: 14px;"
                 onAction="#handleStepCounter" />
 
-<!--Test StepCounter
+        <!--
+        Test StepCounter
+
         <Button text="Step Counter Test"
                 fx:id="stepCounterTestButton"
                 maxWidth="Infinity"
                 style="-fx-font-size: 14px;"
                 onAction="#handleCheckCalories" />
         -->
+
     </VBox>
 
 </StackPane>

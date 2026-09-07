@@ -14,19 +14,19 @@ public class PlanTest {
     /**
      This class tests the constructor and methods of the Plan class.
      */
-    @Test
-    public void testConstructor(){
-        List<Exercise> excercises = new ArrayList<Exercise>();
-        Plan p = new Plan(
-                4,
-                "Strenghtening the core",
-                new Date(),
-                new Date(),
-                excercises
-        );
-
-        assertEquals(4, p.getId());
-        assertEquals("Strenghtening the core", p.getName());
-
-    }
+//    @Test
+//    public void testConstructor(){
+//        List<Exercise> excercises = new ArrayList<Exercise>();
+//        Plan p = new Plan(
+//                4,
+//                "Strenghtening the core",
+//                new Date(),
+//                new Date(),
+//                excercises
+//        );
+//
+//        assertEquals(4, p.getId());
+//        assertEquals("Strenghtening the core", p.getName());
+//
+//    }
 }

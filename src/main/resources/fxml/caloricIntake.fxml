@@ -5,15 +5,17 @@
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
 
-<StackPane xmlns="http://javafx.com/javafx"
+<StackPane fx:id="rootPane"
+           xmlns="http://javafx.com/javafx"
            xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="com.fitapp.controller.CaloricIntakeController">
 
     <!-- Background image -->
-    <ImageView fitWidth="800"
-               fitHeight="600"
-               preserveRatio="false"
-               opacity="0.9">
+    <ImageView fx:id="backgroundImage"
+               opacity="0.9"
+               preserveRatio="true"
+               smooth="true"
+               pickOnBounds="false">
         <image>
             <Image url="@/images/calories.jpg" />
         </image>
@@ -30,8 +32,11 @@
         <Label text="Caloric Intake"
                style="-fx-font-size: 20px; -fx-font-weight: bold;" />
 
-        <TextField fx:id="goalField" promptText="Set daily calorie goal"/>
-        <Button text="Set Goal" onAction="#handleSetGoal"/>
+        <TextField fx:id="goalField"
+                   promptText="Set daily calorie goal"/>
+
+        <Button text="Set Goal"
+                onAction="#handleSetGoal"/>
 
         <TextField fx:id="caloriesField"
                    promptText="Calories Consumed"

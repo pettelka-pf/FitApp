@@ -31,7 +31,7 @@ public class UserDatabaseSQLite implements UserRepository {
             Connection conn = DatabaseManager.getInstance().getConnection();
             try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
                 pstmt.setString(1, username);
-                pstmt.setString(2, password);
+                pstmt.setString(2, PasswordHasher.hash(password));
                 try (ResultSet rs = pstmt.executeQuery()) {
                     return rs.next();
                 }
@@ -43,26 +43,28 @@ public class UserDatabaseSQLite implements UserRepository {
     }
 
     // New User:
-    public void addUser(String username, String password) {
+    public boolean addUser(String username, String password) {
         String sql = "INSERT INTO users (username, password) VALUES (? , ?)";
         try (PreparedStatement stmt = DatabaseManager.getInstance().getConnection().prepareStatement(sql)) {
             stmt.setString(1, username);
-            stmt.setString(2, password);
+            stmt.setString(2, PasswordHasher.hash(password));
             stmt.executeUpdate();
             System.out.println("User added: " + username);
+            return true;
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.out.println("User konnte nicht angelegt werden: " + e.getMessage());
+            return false;
         }
     }
 
     public void updatePassword(String username, String password) {
         String sql = "UPDATE users SET password = ? WHERE username = ?";
         try (PreparedStatement stmt = DatabaseManager.getInstance().getConnection().prepareStatement(sql)) {
-            stmt.setString(1, username);
-            stmt.setString(2, password);
+            stmt.setString(1, PasswordHasher.hash(password));
+            stmt.setString(2, username);
             stmt.executeUpdate();
-            System.out.println("Password updated for: " + password);
+            System.out.println("Password updated for: " + username);
 
 
         } catch (SQLException e) {
@@ -72,14 +74,20 @@ public class UserDatabaseSQLite implements UserRepository {
 
    // @Override
     public void registerUser(String username, String password) {
-        String sql = "INSERT INTO users (username, password) VALUES (?, ?)";
-        try (PreparedStatement stmt = DatabaseManager.getInstance()
-                .getConnection().prepareStatement(sql)) {
+        addUser(username, password);
+    }
+
+    /** @return die id des Benutzers, oder Session.NO_USER wenn es ihn nicht gibt */
+    public int findIdByUsername(String username) {
+        String sql = "SELECT id FROM users WHERE username = ?";
+        try (PreparedStatement stmt = DatabaseManager.getInstance().getConnection().prepareStatement(sql)) {
             stmt.setString(1, username);
-            stmt.setString(2, password);
-            stmt.executeUpdate();
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : Session.NO_USER;
+            }
         } catch (SQLException e) {
             e.printStackTrace();
+            return Session.NO_USER;
         }
     }
 }
