@@ -30,5 +30,4 @@ A JavaFX-based fitness desktop application for tracking workouts, calories, and 
 ## Team
 - Hasan
 - Rene
-- John
 - Christian
