@@ -85,6 +85,8 @@ public class MainMenuController implements Controller {
 
     @FXML
     public void handleViewStatistics() {
+        // Christian: oeffnet die neue Statistik-Seite.
+        changeView("statistics.fxml");
         System.out.println("View Statistics clicked");
     }
 
