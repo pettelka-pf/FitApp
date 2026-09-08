@@ -1,21 +1,36 @@
 package com.fitapp.model;
 
+import java.sql.SQLException;
 import java.util.Date;
+import java.util.List;
 
 public class PlanService {
 
-    // -------------------------
+    private final PlanRepository planRepository;
+
+
+    // =====================================================
+    // CONSTRUCTOR
+    // =====================================================
+
+    public PlanService() {
+
+        this.planRepository =
+                new PlanDatabase();
+    }
+
+
+    // =====================================================
     // PLAN CREATION
-    // -------------------------
+    // =====================================================
 
     public Plan createPlan(
-            int id,
             String name,
             Date startDate,
             Date endDate) {
 
         return new Plan(
-                id,
+                0,
                 name,
                 startDate,
                 endDate,
@@ -24,24 +39,80 @@ public class PlanService {
     }
 
 
-    // -------------------------
+    // =====================================================
+    // SAVE PLAN
+    // =====================================================
+
+    public int savePlan(
+            int userId,
+            Plan plan) throws SQLException {
+
+        if (!isValidPlan(plan)) {
+
+            throw new IllegalArgumentException(
+                    "Invalid training plan."
+            );
+        }
+
+
+        return planRepository.save(
+                userId,
+                plan
+        );
+    }
+
+
+    // =====================================================
+    // LOAD PLANS
+    // =====================================================
+
+    public List<Plan> getPlansForUser(
+            int userId) throws SQLException {
+
+        return planRepository.findByUser(
+                userId
+        );
+    }
+
+
+    // =====================================================
+    // DELETE PLAN
+    // =====================================================
+
+    public void deletePlan(
+            int userId,
+            int planId) throws SQLException {
+
+        planRepository.delete(
+                userId,
+                planId
+        );
+    }
+
+
+    // =====================================================
     // DAY MANAGEMENT
-    // -------------------------
+    // =====================================================
 
     public void addDayToPlan(
             Plan plan,
             String dayName) {
 
-        if (plan == null || dayName == null) {
+        if (plan == null
+                || dayName == null) {
+
             return;
         }
 
-        // Prüfen, ob der Tag bereits existiert
+
         if (plan.getDay(dayName) != null) {
             return;
         }
 
-        PlanDay day = new PlanDay(dayName);
+
+        PlanDay day =
+                new PlanDay(dayName);
+
 
         plan.addDay(day);
     }
@@ -55,13 +126,14 @@ public class PlanService {
             return null;
         }
 
+
         return plan.getDay(dayName);
     }
 
 
-    // -------------------------
+    // =====================================================
     // EXERCISE MANAGEMENT
-    // -------------------------
+    // =====================================================
 
     public void addExerciseToDay(
             Plan plan,
@@ -79,12 +151,14 @@ public class PlanService {
         }
 
 
-        PlanDay day = plan.getDay(dayName);
+        PlanDay day =
+                plan.getDay(dayName);
 
 
         if (day == null) {
 
-            day = new PlanDay(dayName);
+            day =
+                    new PlanDay(dayName);
 
             plan.addDay(day);
         }
@@ -99,7 +173,9 @@ public class PlanService {
                 );
 
 
-        day.addExercise(planExercise);
+        day.addExercise(
+                planExercise
+        );
     }
 
 
@@ -108,7 +184,9 @@ public class PlanService {
             String dayName,
             int exerciseId) {
 
-        if (plan == null || dayName == null) {
+        if (plan == null
+                || dayName == null) {
+
             return;
         }
 
@@ -119,14 +197,16 @@ public class PlanService {
 
         if (day != null) {
 
-            day.removeExercise(exerciseId);
+            day.removeExercise(
+                    exerciseId
+            );
         }
     }
 
 
-    // -------------------------
+    // =====================================================
     // CALCULATIONS
-    // -------------------------
+    // =====================================================
 
     public double calculatePlanCalories(
             Plan plan) {
@@ -134,6 +214,7 @@ public class PlanService {
         if (plan == null) {
             return 0;
         }
+
 
         return plan.getTotalCalories();
     }
@@ -146,13 +227,14 @@ public class PlanService {
             return 0;
         }
 
+
         return plan.getTotalDuration();
     }
 
 
-    // -------------------------
+    // =====================================================
     // VALIDATION
-    // -------------------------
+    // =====================================================
 
     public boolean isValidPlan(
             Plan plan) {
@@ -161,15 +243,32 @@ public class PlanService {
             return false;
         }
 
+
         if (plan.getName() == null
-                || plan.getName().isEmpty()) {
+                || plan.getName()
+                .trim()
+                .isEmpty()) {
 
             return false;
         }
+
 
         if (plan.getStartDate() == null) {
             return false;
         }
+
+
+        if (plan.getEndDate() == null) {
+            return false;
+        }
+
+
+        if (plan.getEndDate()
+                .before(plan.getStartDate())) {
+
+            return false;
+        }
+
 
         return true;
     }

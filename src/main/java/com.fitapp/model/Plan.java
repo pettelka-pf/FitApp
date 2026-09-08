@@ -11,8 +11,11 @@ public class Plan {
     // -------------------------
 
     private int id;
+
     private String name;
+
     private Date startDate;
+
     private Date endDate;
 
     private List<PlanDay> days;
@@ -38,7 +41,6 @@ public class Plan {
                 ? days
                 : new ArrayList<>();
 
-        // Bereits vorhandene Tage direkt sortieren
         sortDays();
     }
 
@@ -51,20 +53,53 @@ public class Plan {
         return id;
     }
 
+
     public String getName() {
         return name;
     }
+
 
     public Date getStartDate() {
         return startDate;
     }
 
+
     public Date getEndDate() {
         return endDate;
     }
 
+
     public List<PlanDay> getDays() {
         return days;
+    }
+
+
+    // -------------------------
+    // SETTERS
+    // -------------------------
+
+    /**
+     * Wird hauptsächlich verwendet,
+     * nachdem die Datenbank beim INSERT
+     * eine neue ID vergeben hat.
+     */
+    public void setId(int id) {
+        this.id = id;
+    }
+
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+
+    public void setStartDate(Date startDate) {
+        this.startDate = startDate;
+    }
+
+
+    public void setEndDate(Date endDate) {
+        this.endDate = endDate;
     }
 
 
@@ -74,30 +109,52 @@ public class Plan {
 
     public void addDay(PlanDay day) {
 
-        if (day != null) {
-
-            days.add(day);
-
-            // Nach jedem Hinzufügen automatisch sortieren
-            sortDays();
+        if (day == null) {
+            return;
         }
+
+
+        // Derselbe Wochentag darf nicht
+        // zweimal vorhanden sein.
+
+        if (getDay(day.getDayName()) != null) {
+            return;
+        }
+
+
+        days.add(day);
+
+        sortDays();
     }
 
 
     public PlanDay getDay(String dayName) {
 
+        if (dayName == null) {
+            return null;
+        }
+
+
         for (PlanDay day : days) {
 
-            if (day.getDayName().equalsIgnoreCase(dayName)) {
+            if (day.getDayName()
+                    .equalsIgnoreCase(dayName)) {
+
                 return day;
             }
         }
+
 
         return null;
     }
 
 
     public void removeDay(String dayName) {
+
+        if (dayName == null) {
+            return;
+        }
+
 
         days.removeIf(
                 day ->
@@ -112,16 +169,20 @@ public class Plan {
     // -------------------------
 
     /**
-     * Sortiert die Trainingstage automatisch von
-     * Montag bis Sonntag.
+     * Sortiert die Trainingstage automatisch
+     * von Montag bis Sonntag.
      */
     private void sortDays() {
 
         days.sort(
                 (day1, day2) ->
                         Integer.compare(
-                                getDayOrder(day1.getDayName()),
-                                getDayOrder(day2.getDayName())
+                                getDayOrder(
+                                        day1.getDayName()
+                                ),
+                                getDayOrder(
+                                        day2.getDayName()
+                                )
                         )
         );
     }
@@ -135,6 +196,7 @@ public class Plan {
         if (dayName == null) {
             return 99;
         }
+
 
         switch (dayName.toLowerCase()) {
 
@@ -173,10 +235,12 @@ public class Plan {
 
         double total = 0;
 
+
         for (PlanDay day : days) {
 
             total += day.getTotalCalories();
         }
+
 
         return total;
     }
@@ -186,10 +250,12 @@ public class Plan {
 
         double total = 0;
 
+
         for (PlanDay day : days) {
 
             total += day.getTotalDuration();
         }
+
 
         return total;
     }
@@ -202,5 +268,16 @@ public class Plan {
     public int getNumberOfDays() {
 
         return days.size();
+    }
+
+
+    // -------------------------
+    // DISPLAY
+    // -------------------------
+
+    @Override
+    public String toString() {
+
+        return name;
     }
 }

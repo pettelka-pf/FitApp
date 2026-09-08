@@ -5,7 +5,7 @@ import io.github.cdimascio.dotenv.Dotenv;
 import java.sql.*;
 
 /**
- * Singleton that manages the SQLite connection and schema initialization.
+ * Singleton that manages the PostgreSQL connection and schema initialization.
  * The database file is stored in ~/.fitapp/fitapp.db.
  */
 public class DatabaseManager {
@@ -109,23 +109,60 @@ public class DatabaseManager {
 
             // Plans Tabelle
             stmt.execute(
-                    "CREATE TABLE IF NOT EXISTS plans ("
-                            + "id SERIAL PRIMARY KEY, "
-                            + "user_id INTEGER REFERENCES users(id), "
-                            + "name TEXT NOT NULL, "
-                            + "start_date DATE, "
-                            + "end_date DATE"
-                            + ")"
+                    """
+                    CREATE TABLE IF NOT EXISTS plans (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER REFERENCES users(id),
+                        name TEXT NOT NULL,
+                        start_date DATE,
+                        end_date DATE
+                    )
+                    """
             );
 
-            // Plan-Exercises Verbindung
+
+// Plan Days Tabelle
             stmt.execute(
-                    "CREATE TABLE IF NOT EXISTS plan_exercises ("
-                            + "plan_id INTEGER REFERENCES plans(id), "
-                            + "exercise_id INTEGER REFERENCES exercises(id), "
-                            + "PRIMARY KEY (plan_id, exercise_id)"
-                            + ")"
+                    """
+                    CREATE TABLE IF NOT EXISTS plan_days (
+                        id SERIAL PRIMARY KEY,
+                        plan_id INTEGER NOT NULL
+                            REFERENCES plans(id)
+                            ON DELETE CASCADE,
+                        day_name TEXT NOT NULL
+                    )
+                    """
             );
+
+
+// Plan-Exercises Verbindung
+            stmt.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS plan_exercises (
+                        plan_id INTEGER NOT NULL
+                            REFERENCES plans(id),
+            
+                        day_name TEXT NOT NULL,
+            
+                        exercise_id INTEGER NOT NULL
+                            REFERENCES exercises(id),
+            
+                        duration DOUBLE PRECISION NOT NULL,
+            
+                        sets INTEGER DEFAULT 0,
+            
+                        reps INTEGER DEFAULT 0,
+            
+                        PRIMARY KEY (
+                            plan_id,
+                            day_name,
+                            exercise_id
+                        )
+                    )
+                    """
+            );
+
+
 
             // Meals Tabelle (für Caloric Intake)
             stmt.execute(

@@ -19,6 +19,44 @@ public class ExerciseDatabase implements ExerciseRepository {
     };
 
     @Override
+    public Exercise findById(
+            int userId,
+            int exerciseId) throws SQLException {
+
+        String sql = """
+            SELECT *
+            FROM exercises
+            WHERE id = ?
+              AND user_id = ?
+            """;
+
+        try (PreparedStatement ps =
+                     connection().prepareStatement(sql)) {
+
+            ps.setInt(
+                    1,
+                    exerciseId
+            );
+
+            ps.setInt(
+                    2,
+                    userId
+            );
+
+            try (ResultSet rs =
+                         ps.executeQuery()) {
+
+                if (rs.next()) {
+                    return fromRow(rs);
+                }
+            }
+        }
+
+        return null;
+    }
+
+
+    @Override
     public int save(int userId, Exercise exercise) throws SQLException {
         String sql = """
                 INSERT INTO exercises

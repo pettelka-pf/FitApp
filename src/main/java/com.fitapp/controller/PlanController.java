@@ -15,156 +15,175 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
 public class PlanController implements Controller {
 
-// =====================================================
-// NAVIGATION
-// =====================================================
+    // =====================================================
+    // NAVIGATION
+    // =====================================================
 
     private Navigator navigator;
 
 
     @Override
-    public void setNavigator(Navigator navigator) {
+    public void setNavigator(
+            Navigator navigator) {
+
         this.navigator = navigator;
     }
 
 
     @Override
-    public void changeView(String fxmlFile) {
-        navigator.changeView(fxmlFile);
+    public void changeView(
+            String fxmlFile) {
+
+        navigator.changeView(
+                fxmlFile
+        );
     }
 
 
-// =====================================================
-// SERVICES / MODEL
-// =====================================================
+    // =====================================================
+    // SERVICES / MODEL
+    // =====================================================
 
-    private final PlanService planService = new PlanService();
+    private final PlanService planService =
+            new PlanService();
+
 
     private final ExerciseService exerciseService =
             new ExerciseService();
 
 
     /*
-     * Liste aller Trainingspläne.
+     * Lokale Liste der aktuell geladenen Pläne.
      *
-     * Jeder neu erstellte Plan wird hier gespeichert.
+     * Die eigentliche dauerhafte Speicherung erfolgt
+     * in der Datenbank.
      */
-    private final List<Plan> plans = new ArrayList<>();
+    private final List<Plan> plans =
+            new ArrayList<>();
 
 
     /*
-     * Der aktuell ausgewählte Trainingsplan.
+     * Aktuell ausgewählter Plan.
      */
     private Plan currentPlan;
 
 
-// =====================================================
-// MAIN WINDOW
-// =====================================================
+    // =====================================================
+    // MAIN WINDOW
+    // =====================================================
 
     @FXML
     private StackPane rootPane;
+
 
     @FXML
     private ImageView backgroundImage;
 
 
-// =====================================================
-// FXML - PLAN
-// =====================================================
+    // =====================================================
+    // FXML - PLAN
+    // =====================================================
 
     @FXML
     private TextField planNameField;
 
+
     @FXML
     private DatePicker startDatePicker;
+
 
     @FXML
     private DatePicker endDatePicker;
 
 
-// =====================================================
-// FXML - DAYS
-// =====================================================
+    // =====================================================
+    // FXML - DAYS
+    // =====================================================
 
     @FXML
     private ComboBox<String> dayField;
+
 
     @FXML
     private ComboBox<PlanDay> daySelector;
 
 
-// =====================================================
-// FXML - EXERCISES
-// =====================================================
+    // =====================================================
+    // FXML - EXERCISES
+    // =====================================================
 
     @FXML
     private ComboBox<String> exerciseTypeBox;
+
 
     @FXML
     private ComboBox<Exercise> exerciseBox;
 
 
-// =====================================================
-// FXML - PLAN EXERCISE DATA
-// =====================================================
+    // =====================================================
+    // FXML - PLAN EXERCISE DATA
+    // =====================================================
 
     @FXML
     private TextField durationField;
 
+
     @FXML
     private TextField setsField;
+
 
     @FXML
     private TextField repsField;
 
 
-// =====================================================
-// FXML - PLAN OVERVIEW
-// =====================================================
+    // =====================================================
+    // FXML - PLAN OVERVIEW
+    // =====================================================
 
     @FXML
     private Label overviewPlanName;
 
+
     @FXML
     private Label overviewDates;
+
 
     @FXML
     private VBox overviewContainer;
 
+
     @FXML
     private Label overviewDuration;
+
 
     @FXML
     private Label overviewCalories;
 
 
-// =====================================================
-// FXML - PLAN SELECTOR
-// =====================================================
+    // =====================================================
+    // FXML - PLAN SELECTOR
+    // =====================================================
 
-    /*
-     * Dropdown zur Auswahl zwischen mehreren Trainingsplänen.
-     */
     @FXML
     private ComboBox<Plan> planSelector;
 
 
-// =====================================================
-// INITIALIZE
-// =====================================================
+    // =====================================================
+    // INITIALIZE
+    // =====================================================
 
     @FXML
     public void initialize() {
 
-        // ---------------------------------------------
+        // -------------------------------------------------
         // Background
-        // ---------------------------------------------
+        // -------------------------------------------------
 
         BackgroundImageHelper.setup(
                 rootPane,
@@ -172,9 +191,9 @@ public class PlanController implements Controller {
         );
 
 
-        // ---------------------------------------------
+        // -------------------------------------------------
         // Exercise categories
-        // ---------------------------------------------
+        // -------------------------------------------------
 
         exerciseTypeBox.setItems(
                 FXCollections.observableArrayList(
@@ -185,9 +204,9 @@ public class PlanController implements Controller {
         );
 
 
-        // ---------------------------------------------
+        // -------------------------------------------------
         // Weekdays
-        // ---------------------------------------------
+        // -------------------------------------------------
 
         dayField.setItems(
                 FXCollections.observableArrayList(
@@ -202,70 +221,74 @@ public class PlanController implements Controller {
         );
 
 
-        // ---------------------------------------------
+        // -------------------------------------------------
         // Initially empty exercise list
-        // ---------------------------------------------
+        // -------------------------------------------------
 
         exerciseBox.setItems(
                 FXCollections.observableArrayList()
         );
 
 
-        // ---------------------------------------------
+        // -------------------------------------------------
         // Initially empty day list
-        // ---------------------------------------------
+        // -------------------------------------------------
 
         daySelector.setItems(
                 FXCollections.observableArrayList()
         );
 
 
-        // ---------------------------------------------
+        // -------------------------------------------------
         // Plan selector
-        // ---------------------------------------------
+        // -------------------------------------------------
 
         planSelector.setItems(
                 FXCollections.observableArrayList()
         );
 
 
-        /*
-         * Der Name des Plans wird im Dropdown angezeigt.
-         *
-         * Dadurch muss Plan nicht zwingend eine
-         * eigene toString()-Methode besitzen.
-         */
-        planSelector.setCellFactory(listView -> {
+        // -------------------------------------------------
+        // Plan selector display
+        // -------------------------------------------------
 
-            javafx.scene.control.ListCell<Plan> cell =
-                    new javafx.scene.control.ListCell<>() {
+        planSelector.setCellFactory(
+                listView -> {
 
-                        @Override
-                        protected void updateItem(
-                                Plan plan,
-                                boolean empty) {
+                    javafx.scene.control.ListCell<Plan> cell =
+                            new javafx.scene.control.ListCell<>() {
 
-                            super.updateItem(plan, empty);
+                                @Override
+                                protected void updateItem(
+                                        Plan plan,
+                                        boolean empty) {
 
-                            if (empty || plan == null) {
-
-                                setText(null);
-
-                            } else {
-
-                                setText(plan.getName());
-                            }
-                        }
-                    };
-
-            return cell;
-        });
+                                    super.updateItem(
+                                            plan,
+                                            empty
+                                    );
 
 
-        /*
-         * Auch der aktuell ausgewählte Eintrag
-         * wird mit dem Namen des Plans angezeigt.
-         */
+                                    if (empty
+                                            || plan == null) {
+
+                                        setText(null);
+
+                                    } else {
+
+                                        setText(
+                                                plan.getName()
+                                        );
+                                    }
+                                }
+                            };
+
+
+                    return cell;
+                }
+        );
+
+
         planSelector.setButtonCell(
                 new javafx.scene.control.ListCell<Plan>() {
 
@@ -274,53 +297,133 @@ public class PlanController implements Controller {
                             Plan plan,
                             boolean empty) {
 
-                        super.updateItem(plan, empty);
+                        super.updateItem(
+                                plan,
+                                empty
+                        );
 
-                        if (empty || plan == null) {
 
-                            setText("no plan available");
+                        if (empty
+                                || plan == null) {
+
+                            setText(
+                                    "no plan available"
+                            );
 
                         } else {
 
-                            setText(plan.getName());
+                            setText(
+                                    plan.getName()
+                            );
                         }
                     }
                 }
         );
 
 
-
-        // ---------------------------------------------
+        // -------------------------------------------------
         // Exercise type selection
-        // ---------------------------------------------
+        // -------------------------------------------------
 
         exerciseTypeBox.setOnAction(
-                event -> handleTypeSelect()
+                event ->
+                        handleTypeSelect()
         );
 
 
-        // ---------------------------------------------
+        // -------------------------------------------------
+        // Pläne aus Datenbank laden
+        // -------------------------------------------------
+
+        loadPlans();
+
+
+        // -------------------------------------------------
         // Initial overview
-        // ---------------------------------------------
+        // -------------------------------------------------
 
         updateOverview();
     }
 
 
-// =====================================================
-// CREATE PLAN
-// =====================================================
+    // =====================================================
+    // LOAD PLANS
+    // =====================================================
+
+    private void loadPlans() {
+
+        try {
+
+            plans.clear();
+
+
+            List<Plan> databasePlans =
+                    planService.getPlansForUser(
+                            Session.getUserId()
+                    );
+
+
+            plans.addAll(
+                    databasePlans
+            );
+
+
+            refreshPlanSelector();
+
+
+            if (!plans.isEmpty()) {
+
+                currentPlan =
+                        plans.get(0);
+
+
+                planSelector.setValue(
+                        currentPlan
+                );
+
+
+                refreshDays();
+
+            } else {
+
+                currentPlan = null;
+
+
+                daySelector.setItems(
+                        FXCollections.observableArrayList()
+                );
+            }
+
+        } catch (SQLException e) {
+
+            e.printStackTrace();
+
+
+            showAlert(
+                    Alert.AlertType.ERROR,
+                    "Database error",
+                    "Training plans could not be loaded."
+            );
+        }
+    }
+
+
+    // =====================================================
+    // CREATE PLAN
+    // =====================================================
 
     @FXML
     public void handleCreatePlan() {
 
         String planName =
-                planNameField.getText().trim();
+                planNameField
+                        .getText()
+                        .trim();
 
 
-        // ---------------------------------------------
+        // -------------------------------------------------
         // Validation
-        // ---------------------------------------------
+        // -------------------------------------------------
 
         if (planName.isEmpty()) {
 
@@ -359,7 +462,9 @@ public class PlanController implements Controller {
 
 
         if (endDatePicker.getValue()
-                .isBefore(startDatePicker.getValue())) {
+                .isBefore(
+                        startDatePicker.getValue()
+                )) {
 
             showAlert(
                     Alert.AlertType.WARNING,
@@ -371,20 +476,12 @@ public class PlanController implements Controller {
         }
 
 
-        // ---------------------------------------------
-        // Create new plan
-        // ---------------------------------------------
-
-        /*
-         * Für die momentan lokale Planverwaltung
-         * verwenden wir eine fortlaufende ID.
-         */
-        int planId = plans.size() + 1;
-
+        // -------------------------------------------------
+        // Create Plan
+        // -------------------------------------------------
 
         Plan newPlan =
                 planService.createPlan(
-                        planId,
                         planName,
                         java.sql.Date.valueOf(
                                 startDatePicker.getValue()
@@ -395,36 +492,60 @@ public class PlanController implements Controller {
                 );
 
 
-        // ---------------------------------------------
-        // Add plan to list
-        // ---------------------------------------------
+        // -------------------------------------------------
+        // Database speichern
+        // -------------------------------------------------
 
-        plans.add(newPlan);
+        try {
+
+            planService.savePlan(
+                    Session.getUserId(),
+                    newPlan
+            );
+
+        } catch (SQLException e) {
+
+            e.printStackTrace();
 
 
-        // ---------------------------------------------
-        // Set new plan as current plan
-        // ---------------------------------------------
+            showAlert(
+                    Alert.AlertType.ERROR,
+                    "Database error",
+                    "The training plan could not be saved."
+            );
 
-        currentPlan = newPlan;
+            return;
+        }
 
 
-        // ---------------------------------------------
-        // Update plan selector
-        // ---------------------------------------------
+        // -------------------------------------------------
+        // Local list
+        // -------------------------------------------------
+
+        plans.add(
+                newPlan
+        );
+
+
+        currentPlan =
+                newPlan;
+
+
+        // -------------------------------------------------
+        // Update selector
+        // -------------------------------------------------
 
         refreshPlanSelector();
 
 
-        /*
-         * Den neu erstellten Plan direkt auswählen.
-         */
-        planSelector.setValue(newPlan);
+        planSelector.setValue(
+                newPlan
+        );
 
 
-        // ---------------------------------------------
-        // Reset selectors
-        // ---------------------------------------------
+        // -------------------------------------------------
+        // Reset
+        // -------------------------------------------------
 
         daySelector.setItems(
                 FXCollections.observableArrayList()
@@ -436,16 +557,17 @@ public class PlanController implements Controller {
         );
 
 
-        // ---------------------------------------------
-        // Update overview
-        // ---------------------------------------------
+        exerciseTypeBox
+                .getSelectionModel()
+                .clearSelection();
+
+
+        // -------------------------------------------------
+        // Overview
+        // -------------------------------------------------
 
         updateOverview();
 
-
-        // ---------------------------------------------
-        // Clear plan input
-        // ---------------------------------------------
 
         planNameField.clear();
 
@@ -453,16 +575,16 @@ public class PlanController implements Controller {
         showAlert(
                 Alert.AlertType.INFORMATION,
                 "Plan created",
-                "Training plan \"" +
-                        planName +
-                        "\" was created successfully."
+                "Training plan \""
+                        + planName
+                        + "\" was created successfully."
         );
     }
 
 
-// =====================================================
-// REFRESH PLAN SELECTOR
-// =====================================================
+    // =====================================================
+    // REFRESH PLAN SELECTOR
+    // =====================================================
 
     private void refreshPlanSelector() {
 
@@ -474,14 +596,10 @@ public class PlanController implements Controller {
     }
 
 
-// =====================================================
-// SELECT PLAN
-// =====================================================
+    // =====================================================
+    // SELECT PLAN
+    // =====================================================
 
-    /**
-     * Wird aufgerufen, wenn im Dropdown ein anderer
-     * Trainingsplan ausgewählt wird.
-     */
     @FXML
     public void handlePlanSelection() {
 
@@ -494,43 +612,30 @@ public class PlanController implements Controller {
         }
 
 
-        // ---------------------------------------------
-        // Current plan wechseln
-        // ---------------------------------------------
+        currentPlan =
+                selectedPlan;
 
-        currentPlan = selectedPlan;
-
-
-        // ---------------------------------------------
-        // Tage des Plans laden
-        // ---------------------------------------------
 
         refreshDays();
 
-
-        // ---------------------------------------------
-        // Exercise selection zurücksetzen
-        // ---------------------------------------------
 
         exerciseBox.setItems(
                 FXCollections.observableArrayList()
         );
 
-        exerciseTypeBox.getSelectionModel()
+
+        exerciseTypeBox
+                .getSelectionModel()
                 .clearSelection();
 
-
-        // ---------------------------------------------
-        // Update overview
-        // ---------------------------------------------
 
         updateOverview();
     }
 
 
-// =====================================================
-// ADD DAY
-// =====================================================
+    // =====================================================
+    // ADD DAY
+    // =====================================================
 
     @FXML
     public void handleAddDay() {
@@ -568,17 +673,17 @@ public class PlanController implements Controller {
             showAlert(
                     Alert.AlertType.WARNING,
                     "Day already exists",
-                    dayName +
-                            " has already been added."
+                    dayName
+                            + " has already been added."
             );
 
             return;
         }
 
 
-        // ---------------------------------------------
-        // Add day
-        // ---------------------------------------------
+        // -------------------------------------------------
+        // Add day in Java
+        // -------------------------------------------------
 
         planService.addDayToPlan(
                 currentPlan,
@@ -586,33 +691,38 @@ public class PlanController implements Controller {
         );
 
 
-        // ---------------------------------------------
-        // Refresh day selector
-        // ---------------------------------------------
+        // -------------------------------------------------
+        // Datenbank aktualisieren
+        // -------------------------------------------------
+
+        if (!saveCurrentPlan()) {
+            return;
+        }
+
+
+        // -------------------------------------------------
+        // Refresh
+        // -------------------------------------------------
 
         refreshDays();
 
-
-        // ---------------------------------------------
-        // Select new day
-        // ---------------------------------------------
 
         for (PlanDay day :
                 daySelector.getItems()) {
 
             if (day.getDayName()
-                    .equalsIgnoreCase(dayName)) {
+                    .equalsIgnoreCase(
+                            dayName
+                    )) {
 
-                daySelector.setValue(day);
+                daySelector.setValue(
+                        day
+                );
 
                 break;
             }
         }
 
-
-        // ---------------------------------------------
-        // Update overview
-        // ---------------------------------------------
 
         updateOverview();
 
@@ -620,20 +730,25 @@ public class PlanController implements Controller {
         showAlert(
                 Alert.AlertType.INFORMATION,
                 "Day added",
-                "Day \"" +
-                        dayName +
-                        "\" was added to the plan."
+                "Day \""
+                        + dayName
+                        + "\" was added to the plan."
         );
     }
 
 
-// =====================================================
-// REFRESH DAYS
-// =====================================================
+    // =====================================================
+    // REFRESH DAYS
+    // =====================================================
 
     private void refreshDays() {
 
         if (currentPlan == null) {
+
+            daySelector.setItems(
+                    FXCollections.observableArrayList()
+            );
+
             return;
         }
 
@@ -646,9 +761,9 @@ public class PlanController implements Controller {
     }
 
 
-// =====================================================
-// SELECT EXERCISE TYPE
-// =====================================================
+    // =====================================================
+    // SELECT EXERCISE TYPE
+    // =====================================================
 
     @FXML
     public void handleTypeSelect() {
@@ -667,11 +782,8 @@ public class PlanController implements Controller {
         }
 
 
-        // ---------------------------------------------
-        // Get exercises from database
-        // ---------------------------------------------
-
         List<Exercise> allExercises;
+
 
         try {
 
@@ -680,7 +792,10 @@ public class PlanController implements Controller {
                             Session.getUserId()
                     );
 
-        } catch (java.sql.SQLException e) {
+        } catch (SQLException e) {
+
+            e.printStackTrace();
+
 
             showAlert(
                     Alert.AlertType.ERROR,
@@ -696,36 +811,47 @@ public class PlanController implements Controller {
                 new ArrayList<>();
 
 
-        // ---------------------------------------------
+        // -------------------------------------------------
         // Filter
-        // ---------------------------------------------
+        // -------------------------------------------------
 
         for (Exercise exercise :
                 allExercises) {
 
-            if ("WEIGHT".equals(selectedType)
-                    && exercise instanceof WeightExercise) {
+            if ("WEIGHT".equals(
+                    selectedType
+            )
+                    && exercise
+                    instanceof WeightExercise) {
 
-                filteredExercises.add(exercise);
+                filteredExercises.add(
+                        exercise
+                );
 
             } else if (
-                    "CARDIO_RUNNING".equals(selectedType)
-                            && exercise instanceof CardioRunningExercise) {
+                    "CARDIO_RUNNING".equals(
+                            selectedType
+                    )
+                            && exercise
+                            instanceof CardioRunningExercise) {
 
-                filteredExercises.add(exercise);
+                filteredExercises.add(
+                        exercise
+                );
 
             } else if (
-                    "CARDIO_CALISTHENICS".equals(selectedType)
-                            && exercise instanceof CardioCalisthenicsExercise) {
+                    "CARDIO_CALISTHENICS".equals(
+                            selectedType
+                    )
+                            && exercise
+                            instanceof CardioCalisthenicsExercise) {
 
-                filteredExercises.add(exercise);
+                filteredExercises.add(
+                        exercise
+                );
             }
         }
 
-
-        // ---------------------------------------------
-        // Put exercises into ComboBox
-        // ---------------------------------------------
 
         exerciseBox.setItems(
                 FXCollections.observableArrayList(
@@ -734,23 +860,15 @@ public class PlanController implements Controller {
         );
 
 
-        exerciseBox.getSelectionModel()
+        exerciseBox
+                .getSelectionModel()
                 .clearSelection();
-
-
-        if (filteredExercises.isEmpty()) {
-
-            System.out.println(
-                    "No exercises found for type: "
-                            + selectedType
-            );
-        }
     }
 
 
-// =====================================================
-// ADD EXERCISE
-// =====================================================
+    // =====================================================
+    // ADD EXERCISE
+    // =====================================================
 
     @FXML
     public void handleAddExercise() {
@@ -805,8 +923,11 @@ public class PlanController implements Controller {
 
         double duration;
 
+
         String durationText =
-                durationField.getText().trim();
+                durationField
+                        .getText()
+                        .trim();
 
 
         if (durationText.isEmpty()) {
@@ -854,8 +975,11 @@ public class PlanController implements Controller {
 
         int sets = 0;
 
+
         String setsText =
-                setsField.getText().trim();
+                setsField
+                        .getText()
+                        .trim();
 
 
         if (!setsText.isEmpty()) {
@@ -898,8 +1022,11 @@ public class PlanController implements Controller {
 
         int reps = 0;
 
+
         String repsText =
-                repsField.getText().trim();
+                repsField
+                        .getText()
+                        .trim();
 
 
         if (!repsText.isEmpty()) {
@@ -937,7 +1064,7 @@ public class PlanController implements Controller {
 
 
         // =================================================
-        // ADD EXERCISE
+        // ADD TO PLAN
         // =================================================
 
         planService.addExerciseToDay(
@@ -951,6 +1078,15 @@ public class PlanController implements Controller {
 
 
         // =================================================
+        // SAVE DATABASE
+        // =================================================
+
+        if (!saveCurrentPlan()) {
+            return;
+        }
+
+
+        // =================================================
         // CALCULATE CALORIES
         // =================================================
 
@@ -961,51 +1097,6 @@ public class PlanController implements Controller {
 
 
         // =================================================
-        // CONSOLE
-        // =================================================
-
-        System.out.println(
-                "Exercise added:"
-        );
-
-        System.out.println(
-                "Name: "
-                        + selectedExercise.getName()
-        );
-
-        System.out.println(
-                "Plan: "
-                        + currentPlan.getName()
-        );
-
-        System.out.println(
-                "Day: "
-                        + selectedDay.getDayName()
-        );
-
-        System.out.println(
-                "Duration: "
-                        + duration
-                        + " min"
-        );
-
-        System.out.println(
-                "Sets: "
-                        + sets
-        );
-
-        System.out.println(
-                "Reps: "
-                        + reps
-        );
-
-        System.out.println(
-                "Calories: "
-                        + calories
-        );
-
-
-        // =================================================
         // UPDATE
         // =================================================
 
@@ -1013,11 +1104,13 @@ public class PlanController implements Controller {
 
 
         // =================================================
-        // RESET INPUT
+        // RESET
         // =================================================
 
         durationField.clear();
+
         setsField.clear();
+
         repsField.clear();
 
 
@@ -1036,10 +1129,14 @@ public class PlanController implements Controller {
                         + duration
                         + " min\n"
                         + "Sets: "
-                        + (sets > 0 ? sets : "-")
+                        + (sets > 0
+                        ? sets
+                        : "-")
                         + "\n"
                         + "Reps: "
-                        + (reps > 0 ? reps : "-")
+                        + (reps > 0
+                        ? reps
+                        : "-")
                         + "\n"
                         + "Calories: "
                         + String.format(
@@ -1051,9 +1148,47 @@ public class PlanController implements Controller {
     }
 
 
-// =====================================================
-// UPDATE OVERVIEW
-// =====================================================
+    // =====================================================
+    // SAVE CURRENT PLAN
+    // =====================================================
+
+    private boolean saveCurrentPlan() {
+
+        if (currentPlan == null) {
+            return false;
+        }
+
+
+        try {
+
+            planService.savePlan(
+                    Session.getUserId(),
+                    currentPlan
+            );
+
+
+            return true;
+
+        } catch (SQLException e) {
+
+            e.printStackTrace();
+
+
+            showAlert(
+                    Alert.AlertType.ERROR,
+                    "Database error",
+                    "The training plan could not be saved."
+            );
+
+
+            return false;
+        }
+    }
+
+
+    // =====================================================
+    // UPDATE OVERVIEW
+    // =====================================================
 
     private void updateOverview() {
 
@@ -1067,9 +1202,9 @@ public class PlanController implements Controller {
         }
 
 
-        // ---------------------------------------------
+        // -------------------------------------------------
         // No current plan
-        // ---------------------------------------------
+        // -------------------------------------------------
 
         if (currentPlan == null) {
 
@@ -1077,28 +1212,34 @@ public class PlanController implements Controller {
                     "No plan created"
             );
 
+
             overviewDates.setText(
                     "Start: - | End: -"
             );
 
-            overviewContainer.getChildren()
+
+            overviewContainer
+                    .getChildren()
                     .clear();
+
 
             overviewDuration.setText(
                     "Total duration: 0 min"
             );
 
+
             overviewCalories.setText(
                     "Total calories: 0 kcal"
             );
+
 
             return;
         }
 
 
-        // ---------------------------------------------
+        // -------------------------------------------------
         // Plan information
-        // ---------------------------------------------
+        // -------------------------------------------------
 
         overviewPlanName.setText(
                 currentPlan.getName()
@@ -1113,17 +1254,18 @@ public class PlanController implements Controller {
         );
 
 
-        // ---------------------------------------------
+        // -------------------------------------------------
         // Clear overview
-        // ---------------------------------------------
+        // -------------------------------------------------
 
-        overviewContainer.getChildren()
+        overviewContainer
+                .getChildren()
                 .clear();
 
 
-        // ---------------------------------------------
+        // -------------------------------------------------
         // Days
-        // ---------------------------------------------
+        // -------------------------------------------------
 
         for (PlanDay day :
                 currentPlan.getDays()) {
@@ -1138,10 +1280,6 @@ public class PlanController implements Controller {
                             + "-fx-padding: 10;"
             );
 
-
-            // -----------------------------------------
-            // Day name
-            // -----------------------------------------
 
             Label dayLabel =
                     new Label(
@@ -1159,9 +1297,9 @@ public class PlanController implements Controller {
                     .add(dayLabel);
 
 
-            // -----------------------------------------
+            // -------------------------------------------------
             // No exercises
-            // -----------------------------------------
+            // -------------------------------------------------
 
             if (day.isEmpty()) {
 
@@ -1181,9 +1319,9 @@ public class PlanController implements Controller {
             }
 
 
-            // -----------------------------------------
+            // -------------------------------------------------
             // Exercises
-            // -----------------------------------------
+            // -------------------------------------------------
 
             else {
 
@@ -1191,7 +1329,8 @@ public class PlanController implements Controller {
                         day.getExercises()) {
 
                     Exercise exercise =
-                            planExercise.getExercise();
+                            planExercise
+                                    .getExercise();
 
 
                     VBox exerciseBox =
@@ -1202,8 +1341,6 @@ public class PlanController implements Controller {
                             "-fx-padding: 5 0 5 10;"
                     );
 
-
-                    // Exercise name
 
                     Label nameLabel =
                             new Label(
@@ -1220,81 +1357,87 @@ public class PlanController implements Controller {
                             .add(nameLabel);
 
 
-                    // Duration
-
                     Label durationLabel =
                             new Label(
                                     "Duration: "
                                             + String.format(
                                             "%.1f",
-                                            planExercise.getDuration()
+                                            planExercise
+                                                    .getDuration()
                                     )
                                             + " min"
                             );
 
 
                     exerciseBox.getChildren()
-                            .add(durationLabel);
+                            .add(
+                                    durationLabel
+                            );
 
-
-                    // Sets
 
                     if (planExercise.getSets() > 0) {
 
                         Label setsLabel =
                                 new Label(
                                         "Sets: "
-                                                + planExercise.getSets()
+                                                + planExercise
+                                                .getSets()
                                 );
 
 
                         exerciseBox.getChildren()
-                                .add(setsLabel);
+                                .add(
+                                        setsLabel
+                                );
                     }
 
-
-                    // Reps
 
                     if (planExercise.getReps() > 0) {
 
                         Label repsLabel =
                                 new Label(
                                         "Reps: "
-                                                + planExercise.getReps()
+                                                + planExercise
+                                                .getReps()
                                 );
 
 
                         exerciseBox.getChildren()
-                                .add(repsLabel);
+                                .add(
+                                        repsLabel
+                                );
                     }
 
-
-                    // Calories
 
                     Label caloriesLabel =
                             new Label(
                                     "Calories: "
                                             + String.format(
                                             "%.1f",
-                                            planExercise.getCalories()
+                                            planExercise
+                                                    .getCalories()
                                     )
                                             + " kcal"
                             );
 
 
                     exerciseBox.getChildren()
-                            .add(caloriesLabel);
+                            .add(
+                                    caloriesLabel
+                            );
 
 
                     dayBox.getChildren()
-                            .add(exerciseBox);
+                            .add(
+                                    exerciseBox
+                            );
                 }
             }
 
 
-            // -----------------------------------------
+            // -------------------------------------------------
             // Day totals
-            // -----------------------------------------
+            // -------------------------------------------------
 
             if (!day.isEmpty()) {
 
@@ -1321,28 +1464,30 @@ public class PlanController implements Controller {
 
 
                 dayBox.getChildren()
-                        .add(dayTotalLabel);
+                        .add(
+                                dayTotalLabel
+                        );
             }
 
 
-            // -----------------------------------------
-            // Add day
-            // -----------------------------------------
-
-            overviewContainer.getChildren()
-                    .add(dayBox);
+            overviewContainer
+                    .getChildren()
+                    .add(
+                            dayBox
+                    );
         }
 
 
-        // ---------------------------------------------
+        // -------------------------------------------------
         // Plan totals
-        // ---------------------------------------------
+        // -------------------------------------------------
 
         overviewDuration.setText(
                 "Total duration: "
                         + String.format(
                         "%.1f",
-                        currentPlan.getTotalDuration()
+                        currentPlan
+                                .getTotalDuration()
                 )
                         + " min"
         );
@@ -1352,16 +1497,17 @@ public class PlanController implements Controller {
                 "Total calories: "
                         + String.format(
                         "%.1f",
-                        currentPlan.getTotalCalories()
+                        currentPlan
+                                .getTotalCalories()
                 )
                         + " kcal"
         );
     }
 
 
-// =====================================================
-// TEXT OVERVIEW
-// =====================================================
+    // =====================================================
+    // TEXT OVERVIEW
+    // =====================================================
 
     public String getPlanOverview() {
 
@@ -1406,10 +1552,6 @@ public class PlanController implements Controller {
         );
 
 
-        // ---------------------------------------------
-        // Days
-        // ---------------------------------------------
-
         for (PlanDay day :
                 currentPlan.getDays()) {
 
@@ -1433,15 +1575,12 @@ public class PlanController implements Controller {
             }
 
 
-            // -----------------------------------------
-            // Exercises
-            // -----------------------------------------
-
             for (PlanExercise planExercise :
                     day.getExercises()) {
 
                 Exercise exercise =
-                        planExercise.getExercise();
+                        planExercise
+                                .getExercise();
 
 
                 overview.append(
@@ -1482,16 +1621,13 @@ public class PlanController implements Controller {
                         "Calories: "
                                 + String.format(
                                 "%.1f",
-                                planExercise.getCalories()
+                                planExercise
+                                        .getCalories()
                         )
                                 + " kcal\n\n"
                 );
             }
 
-
-            // -----------------------------------------
-            // Day totals
-            // -----------------------------------------
 
             overview.append(
                     "Day total duration: "
@@ -1514,10 +1650,6 @@ public class PlanController implements Controller {
         }
 
 
-        // ---------------------------------------------
-        // Plan totals
-        // ---------------------------------------------
-
         overview.append(
                 "==============================\n"
         );
@@ -1527,7 +1659,8 @@ public class PlanController implements Controller {
                 "TOTAL PLAN DURATION: "
                         + String.format(
                         "%.1f",
-                        currentPlan.getTotalDuration()
+                        currentPlan
+                                .getTotalDuration()
                 )
                         + " min\n"
         );
@@ -1537,7 +1670,8 @@ public class PlanController implements Controller {
                 "TOTAL PLAN CALORIES: "
                         + String.format(
                         "%.1f",
-                        currentPlan.getTotalCalories()
+                        currentPlan
+                                .getTotalCalories()
                 )
                         + " kcal\n"
         );
@@ -1547,9 +1681,9 @@ public class PlanController implements Controller {
     }
 
 
-// =====================================================
-// SHOW PLAN OVERVIEW
-// =====================================================
+    // =====================================================
+    // SHOW PLAN OVERVIEW
+    // =====================================================
 
     @FXML
     public void handleShowPlanOverview() {
@@ -1597,16 +1731,14 @@ public class PlanController implements Controller {
 
         alert.showAndWait();
     }
-// =====================================================
-// DELETE CURRENT PLAN
-// =====================================================
+
+
+    // =====================================================
+    // DELETE CURRENT PLAN
+    // =====================================================
 
     @FXML
     public void handleDeletePlan() {
-
-        // ---------------------------------------------
-        // Prüfen, ob ein Plan ausgewählt ist
-        // ---------------------------------------------
 
         if (currentPlan == null) {
 
@@ -1620,26 +1752,28 @@ public class PlanController implements Controller {
         }
 
 
-        // ---------------------------------------------
-        // Sicherheitsabfrage
-        // ---------------------------------------------
-
         Alert confirmation =
-                new Alert(Alert.AlertType.CONFIRMATION);
+                new Alert(
+                        Alert.AlertType.CONFIRMATION
+                );
 
-        confirmation.setTitle("Delete Training Plan");
-        confirmation.setHeaderText(
-                "Delete plan \"" + currentPlan.getName() + "\"?"
+
+        confirmation.setTitle(
+                "Delete Training Plan"
         );
+
+
+        confirmation.setHeaderText(
+                "Delete plan \""
+                        + currentPlan.getName()
+                        + "\"?"
+        );
+
 
         confirmation.setContentText(
                 "This will delete the selected training plan."
         );
 
-
-        // ---------------------------------------------
-        // Abfrage anzeigen
-        // ---------------------------------------------
 
         var result =
                 confirmation.showAndWait();
@@ -1653,89 +1787,102 @@ public class PlanController implements Controller {
         }
 
 
-        // ---------------------------------------------
-        // Plan merken
-        // ---------------------------------------------
-
-        Plan deletedPlan = currentPlan;
+        Plan deletedPlan =
+                currentPlan;
 
 
-        // ---------------------------------------------
-        // Plan aus Liste entfernen
-        // ---------------------------------------------
+        // -------------------------------------------------
+        // DATABASE
+        // -------------------------------------------------
 
-        plans.remove(deletedPlan);
+        try {
+
+            planService.deletePlan(
+                    Session.getUserId(),
+                    deletedPlan.getId()
+            );
+
+        } catch (SQLException e) {
+
+            e.printStackTrace();
 
 
-        // ---------------------------------------------
-        // Aktuellen Plan zurücksetzen
-        // ---------------------------------------------
+            showAlert(
+                    Alert.AlertType.ERROR,
+                    "Database error",
+                    "The training plan could not be deleted."
+            );
+
+            return;
+        }
+
+
+        // -------------------------------------------------
+        // LOCAL LIST
+        // -------------------------------------------------
+
+        plans.remove(
+                deletedPlan
+        );
+
 
         currentPlan = null;
 
 
-        // ---------------------------------------------
-        // Plan-Auswahl aktualisieren
-        // ---------------------------------------------
-
         refreshPlanSelector();
 
 
-        // ---------------------------------------------
-        // Auswahl zurücksetzen
-        // ---------------------------------------------
-
-        planSelector.getSelectionModel()
+        planSelector
+                .getSelectionModel()
                 .clearSelection();
 
-        planSelector.setValue(null);
+
+        planSelector.setValue(
+                null
+        );
 
 
-        // ---------------------------------------------
-        // Wenn noch Pläne vorhanden sind:
-        // ersten Plan auswählen
-        // ---------------------------------------------
+        // -------------------------------------------------
+        // Next plan
+        // -------------------------------------------------
 
         if (!plans.isEmpty()) {
 
             Plan nextPlan =
                     plans.get(0);
 
-            currentPlan = nextPlan;
 
-            planSelector.setValue(nextPlan);
+            currentPlan =
+                    nextPlan;
+
+
+            planSelector.setValue(
+                    nextPlan
+            );
+
 
             refreshDays();
 
         } else {
 
-            // -----------------------------------------
-            // Keine Pläne mehr vorhanden
-            // -----------------------------------------
-
             daySelector.setItems(
                     FXCollections.observableArrayList()
             );
+
 
             exerciseBox.setItems(
                     FXCollections.observableArrayList()
             );
 
-            exerciseTypeBox.getSelectionModel()
+
+            exerciseTypeBox
+                    .getSelectionModel()
                     .clearSelection();
         }
 
 
-        // ---------------------------------------------
-        // Übersicht aktualisieren
-        // ---------------------------------------------
-
         updateOverview();
 
-
-        // ---------------------------------------------
-        // Meldung
-        // ---------------------------------------------
 
         showAlert(
                 Alert.AlertType.INFORMATION,
@@ -1747,9 +1894,9 @@ public class PlanController implements Controller {
     }
 
 
-// =====================================================
-// BACK TO MENU
-// =====================================================
+    // =====================================================
+    // BACK TO MENU
+    // =====================================================
 
     @FXML
     public void handleBackToMenu() {
@@ -1760,9 +1907,9 @@ public class PlanController implements Controller {
     }
 
 
-// =====================================================
-// ALERT
-// =====================================================
+    // =====================================================
+    // ALERT
+    // =====================================================
 
     private void showAlert(
             Alert.AlertType type,
@@ -1773,13 +1920,19 @@ public class PlanController implements Controller {
                 new Alert(type);
 
 
-        alert.setTitle(title);
+        alert.setTitle(
+                title
+        );
 
 
-        alert.setHeaderText(null);
+        alert.setHeaderText(
+                null
+        );
 
 
-        alert.setContentText(message);
+        alert.setContentText(
+                message
+        );
 
 
         alert.showAndWait();
