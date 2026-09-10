@@ -61,7 +61,7 @@ public class Navigator {
                 case "register.fxml" ->
                         stage.setTitle("Registrieren");
 
-                case "stepCounterTest.fxml" ->
+                case "stepCounter.fxml" ->
                         stage.setTitle("Step Counter");
 
                 // Christian: Fenstertitel fuer die neue Statistik-Seite.

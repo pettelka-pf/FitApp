@@ -7,15 +7,17 @@
 <?import javafx.scene.layout.*?>
 
 <!-- Christian: Layout der Seite "StepCounter Statistik". Controller: StatisticsController. -->
-<StackPane xmlns="http://javafx.com/javafx"
+<StackPane fx:id="rootPane"
+           xmlns="http://javafx.com/javafx"
            xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="com.fitapp.controller.StatisticsController">
 
     <!-- Christian: Hintergrundbild wie beim Step Counter. -->
-    <ImageView fitWidth="900"
-               fitHeight="620"
-               preserveRatio="false"
-               opacity="0.9">
+    <ImageView fx:id="backgroundImage"
+               preserveRatio="true"
+               smooth="true"
+               opacity="0.9"
+               pickOnBounds="false">
         <image>
             <Image url="@/images/stepcounter-image.png" />
         </image>
@@ -30,7 +32,7 @@
                  -fx-background-radius: 12;
                  -fx-padding: 18;">
 
-        <Label text="StepCounter Statistik"
+        <Label text="Steps and Calories Statistic"
                style="-fx-font-size: 20px; -fx-font-weight: bold;" />
 
         <!-- Christian: angemeldeter Benutzer. -->
@@ -41,17 +43,27 @@
             <ComboBox fx:id="monatBox" onAction="#handleMonatWechsel" />
         </HBox>
 
-        <!-- Christian: Balkendiagramm - pro Tag die erreichten Schritte. -->
-        <BarChart fx:id="chart" legendVisible="false" VBox.vgrow="ALWAYS">
+        <Button fx:id="statistikWechselButton"
+                text="Kalorien anzeigen"
+                onAction="#handleStatistikWechsel" />
+
+        <BarChart fx:id="chart"
+                  legendVisible="false"
+                  VBox.vgrow="ALWAYS">
+
             <xAxis>
-                <CategoryAxis fx:id="xAxis" label="Tag im Monat" />
+                <CategoryAxis fx:id="xAxis"
+                              label="Tag im Monat" />
             </xAxis>
+
             <yAxis>
-                <NumberAxis fx:id="yAxis" label="Erreichte Schritte" />
+                <NumberAxis fx:id="yAxis"
+                            label="Erreichte Schritte" />
             </yAxis>
         </BarChart>
 
-        <Button text="Zurueck zum Menue"
+
+        <Button text="Back to Main Menu"
                 maxWidth="Infinity"
                 onAction="#handleBackToMenu" />
     </VBox>

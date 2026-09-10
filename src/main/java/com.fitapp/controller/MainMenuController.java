@@ -94,7 +94,7 @@ public class MainMenuController implements Controller {
     @FXML
     public void handleStepCounter() {
         System.out.println("Step Counter clicked");
-        changeView("stepCounterTest.fxml");
+        changeView("stepCounter.fxml");
     }
 
 
@@ -106,7 +106,7 @@ public class MainMenuController implements Controller {
             System.out.println("NAVIGATOR IST NULL!");
         }
 
-        changeView("stepCounterTest.fxml");
+        changeView("stepCounter.fxml");
     }
     */
 

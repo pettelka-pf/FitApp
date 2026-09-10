@@ -23,10 +23,17 @@ public class CaloricIntakeController implements Controller {
 
     private Navigator navigator;
 
+    private static final int DEFAULT_CALORIE_GOAL = 2000;
+
+    // true, solange initialize() noch aus der Datenbank liest.
+    private boolean loading = true;
+
+
     @Override
     public void setNavigator(Navigator navigator) {
         this.navigator = navigator;
     }
+
 
     @Override
     public void changeView(String fxmlFile) {
@@ -40,10 +47,12 @@ public class CaloricIntakeController implements Controller {
 
     private CaloriesTracker calTra;
 
-    // Zugriff auf die Datenbank, damit die Werte einen Neustart überleben.
-    private final CalorieRepository calorieDB = new CalorieDatabase();
+    // Zugriff auf die Datenbank.
+    private final CalorieRepository calorieDB =
+            new CalorieDatabase();
 
-    // Heute verbrannte Kalorien, gemerkt für den Fall eines neuen Ziels.
+    // Heute verbrannte Kalorien.
+    // Wird für den Fall eines neuen Ziels benötigt.
     private int burnedToday;
 
 
@@ -71,36 +80,32 @@ public class CaloricIntakeController implements Controller {
 
 
     // -------------------------
-    // CONSTRUCTOR
-    // -------------------------
-
-    public CaloricIntakeController() {
-    }
-
-
-    // -------------------------
     // INITIALIZE
     // -------------------------
 
     /**
-     * Wird vom FXMLLoader aufgerufen.
-     *
-     * Lädt das gespeicherte Ziel sowie die heute bereits
-     * gegessenen und verbrannten Kalorien.
+     * Lädt das Ziel, die heute gegessenen Kalorien
+     * und die heute verbrannten Kalorien aus der Datenbank.
      */
     @FXML
     public void initialize() {
 
-        caloriesOverflowLabel.setVisible(false);
-
-        // Hintergrundbild automatisch an die Fenstergröße anpassen.
+        // Hintergrundbild an Fenstergröße anpassen.
         BackgroundImageHelper.setup(
                 rootPane,
                 backgroundImage
         );
 
+        caloriesOverflowLabel.setVisible(false);
+
         if (!Session.isLoggedIn()) {
-            showMessage("No user logged in.");
+
+            showMessage(
+                    "No user logged in."
+            );
+
+            loading = false;
+
             return;
         }
 
@@ -108,8 +113,10 @@ public class CaloricIntakeController implements Controller {
         LocalDate today = LocalDate.now();
 
         Task<int[]> task = new Task<>() {
+
             @Override
             protected int[] call() throws Exception {
+
                 return new int[]{
                         calorieDB.getGoal(userId),
                         calorieDB.getEatenToday(userId, today),
@@ -117,6 +124,7 @@ public class CaloricIntakeController implements Controller {
                 };
             }
         };
+
 
         task.setOnSucceeded(event -> {
 
@@ -127,11 +135,20 @@ public class CaloricIntakeController implements Controller {
                     values[1],
                     values[2]
             );
+
+            loading = false;
         });
 
-        task.setOnFailed(event ->
-                showMessage("Could not load saved data.")
-        );
+
+        task.setOnFailed(event -> {
+
+            showMessage(
+                    "Could not load saved data."
+            );
+
+            loading = false;
+        });
+
 
         runInBackground(task);
     }
@@ -142,8 +159,8 @@ public class CaloricIntakeController implements Controller {
     // -------------------------
 
     /**
-     * Baut den Tracker mit dem gespeicherten Ziel auf und
-     * spielt die bereits gegessenen Kalorien nach.
+     * Stellt den CaloriesTracker mit den gespeicherten
+     * Werten wieder her.
      */
     private void restoreTracker(
             int goal,
@@ -153,36 +170,53 @@ public class CaloricIntakeController implements Controller {
 
         burnedToday = burned;
 
-        calTra = new CaloriesTracker(goal);
+        calTra = new CaloriesTracker(
+                goal > 0
+                        ? goal
+                        : DEFAULT_CALORIE_GOAL
+        );
+
         calTra.setBurned(burned);
 
         bindRemaining();
 
         goalField.setPromptText(
-                "Current goal: " + goal
+                "Current goal: "
+                        + calTra
+                        .getDailyLimit()
+                        .get()
         );
 
-        if (eaten <= 0) {
-            updateRemainingFieldColor();
-            return;
+
+        /*
+         * Bereits gegessene Kalorien wiederherstellen.
+         *
+         * Eine Überschreitung des Tagesziels ist erlaubt.
+         * Der Remaining-Wert wird trotzdem bei 0 begrenzt.
+         */
+        if (eaten > 0) {
+
+            try {
+
+                calTra.addCalories(eaten);
+
+            } catch (NegativeCaloriesException e) {
+
+                showMessage(
+                        "Could not restore calorie data."
+                );
+
+                return;
+            }
         }
 
-        try {
 
-            calTra.addCalories(eaten);
-
-            // Farbe entsprechend dem aktuellen Stand setzen.
-            updateRemainingFieldColor();
-
-        } catch (NegativeCaloriesException |
-                 CalorieLimitExceededException e) {
-
-            showMessage(
-                    "Exceeded daily calorie limit!"
-            );
-
-            updateRemainingFieldColor();
-        }
+        /*
+         * Nach dem Laden direkt den aktuellen Zustand
+         * anzeigen.
+         */
+        updateRemainingFieldColor();
+        updateCaloriesOverflowMessage();
     }
 
 
@@ -193,11 +227,32 @@ public class CaloricIntakeController implements Controller {
     @FXML
     public void handleSetGoal(ActionEvent event) {
 
+        if (loading) {
+
+            showMessage(
+                    "Loading, please wait..."
+            );
+
+            return;
+        }
+
+
         try {
 
             int goal = Integer.parseInt(
                     goalField.getText()
             );
+
+
+            if (goal <= 0) {
+
+                showMessage(
+                        "Calorie goal must be greater than 0."
+                );
+
+                return;
+            }
+
 
             if (calTra == null) {
 
@@ -211,15 +266,30 @@ public class CaloricIntakeController implements Controller {
 
                 /*
                  * Nur das Ziel ändern.
-                 * Die bereits gegessenen Kalorien bleiben erhalten.
+                 *
+                 * Die bereits gegessenen Kalorien
+                 * bleiben erhalten.
                  */
-                calTra.getDailyLimit().set(goal);
+                calTra
+                        .getDailyLimit()
+                        .set(goal);
             }
 
-            caloriesOverflowLabel.setVisible(false);
 
-            // Farbe nach Änderung des Ziels aktualisieren.
+            /*
+             * Farbe nach Änderung des Ziels
+             * aktualisieren.
+             */
             updateRemainingFieldColor();
+
+
+            /*
+             * Prüfen, ob die bereits gegessenen
+             * Kalorien das neue verfügbare Budget
+             * überschreiten.
+             */
+            updateCaloriesOverflowMessage();
+
 
             // Ziel speichern.
             persist(
@@ -246,16 +316,25 @@ public class CaloricIntakeController implements Controller {
     @FXML
     public void handleAddingCalories() {
 
-        if (calTra == null) {
+        if (loading) {
 
-            caloriesOverflowLabel.setText(
-                    "Please set a calorie goal first."
+            showMessage(
+                    "Loading, please wait..."
             );
-
-            caloriesOverflowLabel.setVisible(true);
 
             return;
         }
+
+
+        if (calTra == null) {
+
+            showMessage(
+                    "Please set a calorie goal first."
+            );
+
+            return;
+        }
+
 
         try {
 
@@ -263,42 +342,50 @@ public class CaloricIntakeController implements Controller {
                     caloriesField.getText()
             );
 
-            // Kalorien hinzufügen
-            calTra.addCalories(calories);
-
-            // Anzeige aktualisieren
-            remainingField.textProperty().bind(
-                    calTra.remainingCaloriesProperty().asString()
-            );
-
-            // Farbe und Fehlermeldung aktualisieren
-            updateRemainingFieldColor();
 
             /*
-             * Prüfen, ob das Kalorienlimit überschritten wurde.
+             * Kalorien hinzufügen.
              *
-             * remaining > 0  -> noch unter dem Ziel
-             * remaining == 0 -> Ziel genau erreicht
-             * remaining < 0  -> Ziel überschritten
+             * Das Ziel stellt KEINE Obergrenze dar.
+             * Es kann also beliebig weitergegessen werden.
              */
-            int remaining =
-                    calTra.remainingCaloriesProperty().get();
-
-            if (remaining < 0) {
-
-                caloriesOverflowLabel.setText(
-                        "Exceeded daily calorie limit!"
-                );
-
-                caloriesOverflowLabel.setVisible(true);
-
-            } else {
-
-                caloriesOverflowLabel.setVisible(false);
-            }
+            calTra.addCalories(calories);
 
 
-            // Mahlzeit speichern
+            // Eingabefeld leeren.
+            caloriesField.clear();
+
+
+            /*
+             * Remaining-Feld aktualisieren.
+             *
+             * Unter dem verfügbaren Budget:
+             *     positiver Wert
+             *
+             * Ziel erreicht:
+             *     0
+             *
+             * Ziel überschritten:
+             *     0
+             *
+             * Der Wert wird im CaloriesTracker
+             * auf mindestens 0 begrenzt.
+             */
+            updateRemainingFieldColor();
+
+
+            /*
+             * Prüfen, ob das verfügbare Kalorienbudget
+             * überschritten wurde.
+             *
+             * Die Meldung verwendet die tatsächlichen
+             * aufgenommenen Kalorien und nicht den
+             * Remaining-Wert.
+             */
+            updateCaloriesOverflowMessage();
+
+
+            // Mahlzeit speichern.
             persist(
                     () -> calorieDB.addMeal(
                             Session.getUserId(),
@@ -311,22 +398,17 @@ public class CaloricIntakeController implements Controller {
 
         } catch (NegativeCaloriesException e) {
 
-            caloriesOverflowLabel.setText(
+            showMessage(
                     "Calories must be a positive number!"
             );
 
-            caloriesOverflowLabel.setVisible(true);
-
         } catch (NumberFormatException e) {
 
-            caloriesOverflowLabel.setText(
+            showMessage(
                     "Please enter a valid number."
             );
-
-            caloriesOverflowLabel.setVisible(true);
         }
     }
-
 
 
     // -------------------------
@@ -336,22 +418,38 @@ public class CaloricIntakeController implements Controller {
     @FXML
     public void handleReset(ActionEvent event) {
 
+        if (loading) {
+
+            showMessage(
+                    "Loading, please wait..."
+            );
+
+            return;
+        }
+
+
         if (calTra != null) {
 
             calTra.reset();
         }
 
-        caloriesField.setText("");
 
-        caloriesOverflowLabel.setVisible(false);
+        caloriesField.clear();
+
 
         /*
-         * Nach dem Reset sind wieder alle Zielkalorien verfügbar.
-         * Deshalb wird das Feld wieder grün.
+         * Nach dem Reset:
+         *
+         * Gegessene Kalorien = 0
+         * Remaining = Tageslimit + verbrannte Kalorien
+         * Meldung = aus
          */
         updateRemainingFieldColor();
 
-        // Auch die Datenbank zurücksetzen.
+        updateCaloriesOverflowMessage();
+
+
+        // Datenbank ebenfalls zurücksetzen.
         persist(
                 () -> calorieDB.resetMeals(
                         Session.getUserId(),
@@ -363,7 +461,7 @@ public class CaloricIntakeController implements Controller {
 
 
     // -------------------------
-    // BACK
+    // BACK TO MENU
     // -------------------------
 
     @FXML
@@ -379,26 +477,35 @@ public class CaloricIntakeController implements Controller {
 
     /**
      * Bindet die Anzeige der verbleibenden Kalorien.
+     *
+     * Der CaloriesTracker sorgt dafür, dass die Anzeige
+     * bei 0 stehen bleibt, sobald das verfügbare Budget
+     * erreicht oder überschritten wurde.
      */
     private void bindRemaining() {
 
         remainingField.textProperty().bind(
-                calTra.remainingCaloriesProperty().asString()
+                calTra
+                        .remainingCaloriesProperty()
+                        .asString()
         );
-
-        updateRemainingFieldColor();
     }
 
 
     /**
-     * Ändert die Hintergrundfarbe des Remaining-Feldes
-     * abhängig davon, ob das Kalorienziel bereits erreicht wurde.
+     * Ändert die Hintergrundfarbe des Remaining-Feldes.
      *
-     * Grün:
-     *     Noch Kalorien übrig.
+     * remaining > 0:
+     *     Kalorienbudget noch nicht erreicht
      *
-     * Rot:
-     *     Ziel erreicht oder überschritten.
+     * remaining == 0:
+     *     Budget erreicht oder überschritten
+     *
+     * Die eigentliche Farblogik bleibt dabei wie
+     * in deinem bisherigen Controller:
+     *
+     * Grün = noch Kalorien verfügbar
+     * Rot   = Limit erreicht/überschritten
      */
     private void updateRemainingFieldColor() {
 
@@ -406,12 +513,16 @@ public class CaloricIntakeController implements Controller {
             return;
         }
 
+
         int remaining =
-                calTra.remainingCaloriesProperty().get();
+                calTra
+                        .remainingCaloriesProperty()
+                        .get();
+
 
         if (remaining > 0) {
 
-            // Noch Kalorien bis zum Ziel verfügbar.
+            // Noch Kalorien verfügbar.
             remainingField.setStyle(
                     "-fx-control-inner-background: #90EE90;" +
                             "-fx-text-fill: black;"
@@ -419,11 +530,69 @@ public class CaloricIntakeController implements Controller {
 
         } else {
 
-            // Ziel erreicht.
+            // Limit erreicht oder überschritten.
             remainingField.setStyle(
                     "-fx-control-inner-background: #FF7F7F;" +
                             "-fx-text-fill: black;"
             );
+        }
+    }
+
+
+    // -------------------------
+    // CALORIE OVERFLOW MESSAGE
+    // -------------------------
+
+    /**
+     * Zeigt eine Meldung an, sobald das verfügbare
+     * Kalorienbudget überschritten wurde.
+     *
+     * Wichtig:
+     *
+     * remainingCaloriesProperty() wird hierfür NICHT
+     * verwendet, weil dieser Wert bei 0 gedeckelt wird.
+     *
+     * Stattdessen wird die tatsächlich aufgenommene
+     * Kalorienmenge aus consumed gelesen.
+     *
+     * Verbrannte Kalorien erhöhen das verfügbare
+     * Tagesbudget.
+     */
+    private void updateCaloriesOverflowMessage() {
+
+        if (calTra == null) {
+            return;
+        }
+
+
+        int consumed =
+                calTra
+                        .getConsumed()
+                        .get();
+
+
+        int available =
+                calTra
+                        .getDailyLimit()
+                        .get()
+                        + calTra
+                        .getBurned()
+                        .get();
+
+
+        if (consumed > available) {
+
+            caloriesOverflowLabel.setText(
+                    "You consumed "
+                            + consumed
+                            + " calories today."
+            );
+
+            caloriesOverflowLabel.setVisible(true);
+
+        } else {
+
+            caloriesOverflowLabel.setVisible(false);
         }
     }
 
@@ -452,17 +621,18 @@ public class CaloricIntakeController implements Controller {
             }
         };
 
+
         task.setOnFailed(event ->
                 showMessage(errorMessage)
         );
+
 
         runInBackground(task);
     }
 
 
     /**
-     * Daemon-Thread, damit ein hängender Zugriff
-     * das Schließen der Anwendung nicht blockiert.
+     * Startet den Task in einem Daemon-Thread.
      */
     private void runInBackground(Task<?> task) {
 
@@ -490,10 +660,6 @@ public class CaloricIntakeController implements Controller {
     // DATABASE ACTION
     // -------------------------
 
-    /**
-     * Alles, was eine Exception werfen darf
-     * und nichts zurückgibt.
-     */
     @FunctionalInterface
     private interface DatabaseAction {
 

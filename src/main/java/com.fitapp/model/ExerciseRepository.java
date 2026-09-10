@@ -27,4 +27,10 @@ public interface ExerciseRepository {
             int userId,
             int exerciseId
     ) throws SQLException;
+
+
+    void delete(
+            int userId,
+            int exerciseId
+    ) throws SQLException;
 }

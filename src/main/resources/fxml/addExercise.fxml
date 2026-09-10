@@ -10,112 +10,271 @@
            xmlns:fx="http://javafx.com/fxml"
            fx:controller="com.fitapp.controller.ExerciseController">
 
-    <!-- Background image -->
+    <!-- ========================= -->
+    <!-- BACKGROUND                 -->
+    <!-- ========================= -->
+
     <ImageView fx:id="backgroundImage"
                preserveRatio="true"
                smooth="true"
                opacity="0.9"
                pickOnBounds="false">
+
         <image>
             <Image url="@/images/trainingsplan_gross.png"/>
         </image>
+
     </ImageView>
 
-    <VBox spacing="10"
+
+    <!-- ========================= -->
+    <!-- MAIN CONTENT               -->
+    <!-- ========================= -->
+
+    <HBox spacing="20"
           alignment="CENTER"
-          maxWidth="320"
-          style="-fx-background-color: rgba(255,255,255,0.85);
+          style="-fx-padding: 25;">
+
+
+        <!-- ================================================= -->
+        <!-- LEFT SIDE - CREATE EXERCISE                       -->
+        <!-- ================================================= -->
+
+        <VBox spacing="12"
+              alignment="CENTER"
+              prefWidth="320"
+              maxWidth="320"
+              maxHeight="700"
+              style="-fx-background-color: rgba(255,255,255,0.90);
                  -fx-background-radius: 12;
                  -fx-padding: 25;">
 
-        <Label text="Create Exercise"
-               style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
 
-        <!-- General information -->
-
-        <TextField fx:id="exerciseNameField"
-                   promptText="Exercise name"/>
-
-        <ComboBox fx:id="exerciseCategory"
-                  promptText="Select exercise category"
-                  maxWidth="Infinity"/>
-
-        <TextField fx:id="exerciseCaloriesField"
-                   promptText="Calories per hour"/>
-
-        <TextField fx:id="exerciseDurationField"
-                   promptText="Duration in minutes"/>
-
-        <TextField fx:id="exerciseDifficultyField"
-                   promptText="Difficulty"/>
+            <Label text="Create Exercise"
+                   style="-fx-font-size: 18px;
+                      -fx-font-weight: bold;"/>
 
 
-        <!-- Weight Exercise -->
+            <!-- ========================= -->
+            <!-- GENERAL INFORMATION        -->
+            <!-- ========================= -->
 
-        <VBox fx:id="weightFields"
-              spacing="8"
-              managed="false"
-              visible="false">
+            <TextField fx:id="exerciseNameField"
+                       promptText="Exercise name"
+                       maxWidth="Infinity"/>
 
-            <TextField fx:id="exerciseWeightField"
-                       promptText="Weight (kg)"/>
 
-            <TextField fx:id="exerciseRepetitionField"
-                       promptText="Repetitions"/>
+            <ComboBox fx:id="exerciseCategory"
+                      promptText="Select exercise category"
+                      maxWidth="Infinity"/>
 
-            <TextField fx:id="exerciseMuscleGroupField"
-                       promptText="Muscle group"/>
+
+            <TextField fx:id="exerciseCaloriesField"
+                       promptText="Calories per hour"
+                       maxWidth="Infinity"/>
+
+
+            <TextField fx:id="exerciseDurationField"
+                       promptText="Duration in minutes"
+                       maxWidth="Infinity"/>
+
+
+            <TextField fx:id="exerciseDifficultyField"
+                       promptText="Difficulty"
+                       maxWidth="Infinity"/>
+
+
+            <!-- ========================= -->
+            <!-- WEIGHT                     -->
+            <!-- ========================= -->
+
+            <VBox fx:id="weightFields"
+                  spacing="8"
+                  managed="false"
+                  visible="false">
+
+                <TextField fx:id="exerciseWeightField"
+                           promptText="Weight (kg)"
+                           maxWidth="Infinity"/>
+
+                <TextField fx:id="exerciseRepetitionField"
+                           promptText="Repetitions"
+                           maxWidth="Infinity"/>
+
+                <TextField fx:id="exerciseMuscleGroupField"
+                           promptText="Muscle group"
+                           maxWidth="Infinity"/>
+
+            </VBox>
+
+
+            <!-- ========================= -->
+            <!-- RUNNING                    -->
+            <!-- ========================= -->
+
+            <VBox fx:id="runningFields"
+                  spacing="8"
+                  managed="false"
+                  visible="false">
+
+                <TextField fx:id="exerciseDistanceField"
+                           promptText="Distance (km)"
+                           maxWidth="Infinity"/>
+
+                <TextField fx:id="exerciseSpeedField"
+                           promptText="Speed (km/h)"
+                           maxWidth="Infinity"/>
+
+                <TextField fx:id="exerciseStepsField"
+                           promptText="Steps"
+                           maxWidth="Infinity"/>
+
+            </VBox>
+
+
+            <!-- ========================= -->
+            <!-- CALISTHENICS               -->
+            <!-- ========================= -->
+
+            <VBox fx:id="calisthenicsFields"
+                  spacing="8"
+                  managed="false"
+                  visible="false">
+
+                <TextField fx:id="exerciseIntervalField"
+                           promptText="Interval (minutes)"
+                           maxWidth="Infinity"/>
+
+                <TextField fx:id="exerciseExercisesPerRoundField"
+                           promptText="Exercises per round"
+                           maxWidth="Infinity"/>
+
+                <TextField fx:id="exerciseRoundsField"
+                           promptText="Number of rounds"
+                           maxWidth="Infinity"/>
+
+            </VBox>
+
+
+            <Button text="Add Exercise"
+                    onAction="#handleCreateExercise"
+                    maxWidth="200"/>
+
+
+            <Separator/>
+
+
+            <Button text="Back to Menu"
+                    onAction="#handleBackToMenu"
+                    maxWidth="200"/>
 
         </VBox>
 
 
-        <!-- Running Exercise -->
+        <!-- ================================================= -->
+        <!-- RIGHT SIDE - SAVED EXERCISES                      -->
+        <!-- ================================================= -->
 
-        <VBox fx:id="runningFields"
-              spacing="8"
-              managed="false"
-              visible="false">
+        <VBox spacing="10"
+              prefWidth="420"
+              maxWidth="420"
+              maxHeight="700"
+              style="-fx-background-color: rgba(255,255,255,0.90);
+                 -fx-background-radius: 12;
+                 -fx-padding: 20;">
 
-            <TextField fx:id="exerciseDistanceField"
-                       promptText="Distance (km)"/>
 
-            <TextField fx:id="exerciseSpeedField"
-                       promptText="Speed (km/h)"/>
+            <Label text="Saved Exercises"
+                   style="-fx-font-size: 18px;
+                      -fx-font-weight: bold;"/>
 
-            <TextField fx:id="exerciseStepsField"
-                       promptText="Steps"/>
+
+            <!-- ========================= -->
+            <!-- EXERCISE LIST              -->
+            <!-- ========================= -->
+
+            <ScrollPane fitToWidth="true"
+                        VBox.vgrow="ALWAYS"
+                        style="-fx-background-color: transparent;">
+
+                <ListView fx:id="exerciseListView"
+                          prefHeight="250"
+                          VBox.vgrow="ALWAYS"/>
+
+            </ScrollPane>
+
+
+            <Separator/>
+
+
+            <!-- ========================= -->
+            <!-- SELECTED EXERCISE          -->
+            <!-- ========================= -->
+
+            <Label text="Selected Exercise"
+                   style="-fx-font-size: 16px;
+                      -fx-font-weight: bold;"/>
+
+
+            <VBox fx:id="exerciseDetails"
+                  spacing="5"
+                  style="-fx-padding: 5;">
+
+
+                <Label fx:id="selectedExerciseName"
+                       text="Name: -"
+                       style="-fx-font-weight: bold;"/>
+
+
+                <Label fx:id="selectedExerciseCategory"
+                       text="Category: -"/>
+
+
+                <Label fx:id="selectedExerciseDescription"
+                       text="Description: -"/>
+
+
+                <Label fx:id="selectedExerciseDifficulty"
+                       text="Difficulty: -"/>
+
+
+                <Label fx:id="selectedExerciseDuration"
+                       text="Duration: -"/>
+
+
+                <Label fx:id="selectedExerciseCalories"
+                       text="Calories: -"/>
+
+
+                <Separator/>
+
+
+                <Label fx:id="selectedExerciseSpecific1"
+                       text=""/>
+
+
+                <Label fx:id="selectedExerciseSpecific2"
+                       text=""/>
+
+
+                <Label fx:id="selectedExerciseSpecific3"
+                       text=""/>
+
+            </VBox>
+
+
+            <!-- ========================= -->
+            <!-- DELETE                     -->
+            <!-- ========================= -->
+
+            <Button text="Delete selected exercise"
+                    onAction="#handleDeleteExercise"
+                    maxWidth="Infinity"
+                    style="-fx-background-color: #e74c3c;
+                       -fx-text-fill: white;
+                       -fx-font-weight: bold;"/>
 
         </VBox>
 
-
-        <!-- Calisthenics Exercise -->
-
-        <VBox fx:id="calisthenicsFields"
-              spacing="8"
-              managed="false"
-              visible="false">
-
-            <TextField fx:id="exerciseIntervalField"
-                       promptText="Interval (minutes)"/>
-
-            <TextField fx:id="exerciseExercisesPerRoundField"
-                       promptText="Exercises per round"/>
-
-            <TextField fx:id="exerciseRoundsField"
-                       promptText="Number of rounds"/>
-
-        </VBox>
-
-
-        <Button text="Add Exercise"
-                onAction="#handleCreateExercise"
-                maxWidth="200"/>
-
-        <Separator/>
-
-        <Button text="Back to Menu"
-                onAction="#handleBackToMenu"/>
-
-    </VBox>
-
+    </HBox>
 </StackPane>

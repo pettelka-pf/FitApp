@@ -1,33 +1,60 @@
-
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.scene.control.*?>
-<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.*?>
 
-<VBox xmlns="http://javafx.com/javafx"
-      xmlns:fx="http://javafx.com/fxml"
-      alignment="CENTER"
-      spacing="10"
-      fx:controller="com.fitapp.controller.StepCounterController">
+<StackPane fx:id="rootPane"
+           xmlns="http://javafx.com/javafx"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.fitapp.controller.StepCounterController">
 
-    <Label text="Step Counter"/>
+    <!-- Background image -->
+    <ImageView fx:id="backgroundImage"
+               preserveRatio="true"
+               smooth="true"
+               opacity="0.9"
+               pickOnBounds="false">
+        <image>
+            <Image url="@/images/stepcounter-image.png" />
+        </image>
+    </ImageView>
 
-    <TextField fx:id="stepsField" promptText="Enter steps"/>
+    <!-- Caloric intake card -->
+    <VBox spacing="15"
+          alignment="CENTER"
+          maxWidth="320"
+          style="-fx-background-color: rgba(255,255,255,0.85);
+                 -fx-background-radius: 12;
+                 -fx-padding: 25;">
 
-    <TextField fx:id="remainingField" editable="false"/>
+        <TextField fx:id="goalField" promptText="Set daily step goal"/>
+        <Button text="Set Goal" onAction="#handleSetGoal"/>
 
-    <Label fx:id="stepOverflowLabel"
-           visible="false"
-           textFill="red"/>
+        <Label text="STEP COUNTER"
+               style="-fx-font-size: 20px; -fx-font-weight: bold;" />
 
-    <ProgressBar fx:id="progressBar" prefWidth="300"/>
+        <TextField fx:id="stepsField"
+                   promptText="Steps done"
+                   maxWidth="Infinity" />
 
-    <Label fx:id="progressLabel" text="0 %"/>
+        <Button text="Add Steps"
+                maxWidth="Infinity"
+                style="-fx-font-size: 14px;"
+                onAction="#handleAddingSteps" />
 
-    <!-- <Button text="Adds
-    <Button text="Reset" onAction="#handleVBox>-->
+        <TextField fx:id="remainingField"
+                   promptText="Remaining Steps"
+                   editable="false"
+                   maxWidth="Infinity" />
 
-        <Button text="Reset Calories"
+        <Label fx:id="stepOverflowLabel"
+               text="Lot of Steps taken!"
+               textFill="RED"
+               visible="false" />
+
+        <Button text="Reset Steps"
                 maxWidth="Infinity"
                 style="-fx-font-size: 14px;"
                 onAction="#handleReset" />
@@ -37,4 +64,6 @@
                 style="-fx-font-size: 14px;"
                 onAction="#handleBackToMenu" />
 
-</VBox>
+    </VBox>
+
+</StackPane>

@@ -123,19 +123,27 @@ public class CaloriesTracker {
      *
      * dailyLimit - consumed + burned
      *
-     * Wenn das Ergebnis negativ wird,
-     * wurde das Kalorienlimit überschritten.
+     * Der Wert wird auf mindestens 0 begrenzt.
+     * Dadurch wird bei einer Überschreitung nicht
+     * ins Minus gezählt.
+     *
+     * Die tatsächlich gegessenen Kalorien bleiben
+     * weiterhin in consumed gespeichert.
      */
     public IntegerBinding remainingCaloriesProperty() {
 
         return Bindings.createIntegerBinding(
-                () -> dailyLimit.get()
-                        - consumed.get()
-                        + burned.get(),
+                () -> Math.max(
+                        0,
+                        dailyLimit.get()
+                                - consumed.get()
+                                + burned.get()
+                ),
 
                 dailyLimit,
                 consumed,
                 burned
         );
     }
+
 }

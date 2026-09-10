@@ -15,6 +15,9 @@ public interface CalorieRepository {
     /** Summe aller Mahlzeiten des Tages. */
     int getEatenToday(int userId, LocalDate date) throws SQLException;
 
+    /** Summe aller aufgenommenen Kalorien eines bestimmten Tages. */
+    int getEatenOnDate(int userId, LocalDate date) throws SQLException;
+
     /** Summe der verbrannten Kalorien des Tages aus exercises. */
     int getBurnedToday(int userId, LocalDate date) throws SQLException;
 
