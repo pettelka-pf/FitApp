@@ -4,6 +4,7 @@ import com.fitapp.model.*;
 import com.fitapp.navigation.Navigator;
 import com.fitapp.util.BackgroundImageHelper;
 
+import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -94,6 +95,12 @@ public class CaloricIntakeController implements Controller {
         BackgroundImageHelper.setup(
                 rootPane,
                 backgroundImage
+        );
+
+        // Focus on caloriesfield
+
+        Platform.runLater(() ->
+                caloriesField.requestFocus()
         );
 
         caloriesOverflowLabel.setVisible(false);

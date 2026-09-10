@@ -4,6 +4,7 @@ import com.fitapp.model.*;
 import com.fitapp.navigation.Navigator;
 import com.fitapp.util.BackgroundImageHelper;
 
+import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -88,6 +89,12 @@ public class StepCounterController implements Controller {
         BackgroundImageHelper.setup(
                 rootPane,
                 backgroundImage
+        );
+
+        // Focus on stepsfield
+
+        Platform.runLater(() ->
+                stepsField.requestFocus()
         );
 
         stepOverflowLabel.setVisible(false);
