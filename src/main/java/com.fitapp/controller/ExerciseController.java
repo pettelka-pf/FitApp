@@ -5,9 +5,11 @@ import com.fitapp.navigation.Navigator;
 import com.fitapp.util.BackgroundImageHelper;
 
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
@@ -16,26 +18,57 @@ import javafx.scene.control.TextField;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.collections.ObservableList;
-import java.util.Optional;
 
 import java.util.Date;
+import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ExerciseController implements Controller {
 
     private Navigator navigator;
 
-// -------------------------
-// SERVICE
-// -------------------------
+    // =====================================================
+    // SERVICE
+    // =====================================================
 
     private final ExerciseService exerciseService =
             new ExerciseService();
 
 
-// -------------------------
-// GENERAL FIELDS
-// -------------------------
+    // =====================================================
+    // CONCURRENCY
+    // =====================================================
+
+    /*
+     * Thread-Pool für Hintergrundaufgaben.
+     *
+     * Datenbankoperationen werden nicht auf dem
+     * JavaFX Application Thread ausgeführt.
+     */
+    private final ExecutorService executor =
+            Executors.newFixedThreadPool(
+                    2,
+                    runnable -> {
+
+                        Thread thread =
+                                new Thread(runnable);
+
+                        thread.setDaemon(true);
+
+                        thread.setName(
+                                "Exercise-Background-Thread"
+                        );
+
+                        return thread;
+                    }
+            );
+
+
+
+    // =====================================================
+    // GENERAL FIELDS
+    // =====================================================
 
     @FXML
     private StackPane rootPane;
@@ -59,9 +92,23 @@ public class ExerciseController implements Controller {
     private TextField exerciseDifficultyField;
 
 
-// -------------------------
-// WEIGHT FIELDS
-// -------------------------
+    // =====================================================
+    // BUTTON / STATUS
+    // =====================================================
+
+    @FXML
+    private Button addExerciseButton;
+
+    @FXML
+    private Button deleteExerciseButton;
+
+    @FXML
+    private Label statusLabel;
+
+
+    // =====================================================
+    // WEIGHT FIELDS
+    // =====================================================
 
     @FXML
     private VBox weightFields;
@@ -76,9 +123,9 @@ public class ExerciseController implements Controller {
     private TextField exerciseMuscleGroupField;
 
 
-// -------------------------
-// RUNNING FIELDS
-// -------------------------
+    // =====================================================
+    // RUNNING FIELDS
+    // =====================================================
 
     @FXML
     private VBox runningFields;
@@ -93,9 +140,9 @@ public class ExerciseController implements Controller {
     private TextField exerciseStepsField;
 
 
-// -------------------------
-// CALISTHENICS FIELDS
-// -------------------------
+    // =====================================================
+    // CALISTHENICS FIELDS
+    // =====================================================
 
     @FXML
     private VBox calisthenicsFields;
@@ -110,9 +157,9 @@ public class ExerciseController implements Controller {
     private TextField exerciseRoundsField;
 
 
-// -------------------------
-// SAVED EXERCISES
-// -------------------------
+    // =====================================================
+    // SAVED EXERCISES
+    // =====================================================
 
     @FXML
     private ListView<Exercise> exerciseListView;
@@ -148,9 +195,9 @@ public class ExerciseController implements Controller {
     private Label selectedExerciseSpecific3;
 
 
-// -------------------------
-// NAVIGATION
-// -------------------------
+    // =====================================================
+    // NAVIGATION
+    // =====================================================
 
     @Override
     public void setNavigator(Navigator navigator) {
@@ -164,9 +211,9 @@ public class ExerciseController implements Controller {
     }
 
 
-// -------------------------
-// INITIALIZE
-// -------------------------
+    // =====================================================
+    // INITIALIZE
+    // =====================================================
 
     @FXML
     public void initialize() {
@@ -192,13 +239,17 @@ public class ExerciseController implements Controller {
 
 
         updateFields();
-        setupExerciseList();
 
+        setupExerciseList();
 
 
         // Details zunächst ausblenden.
         exerciseDetails.setVisible(false);
         exerciseDetails.setManaged(false);
+
+
+        // Status initialisieren.
+        statusLabel.setText("Loading exercises...");
 
 
         // Gespeicherte Übungen laden.
@@ -219,13 +270,16 @@ public class ExerciseController implements Controller {
     }
 
 
-// -------------------------
-// LOAD EXERCISES
-// -------------------------
+    // =====================================================
+    // LOAD EXERCISES - BACKGROUND TASK
+    // =====================================================
 
     /**
      * Lädt alle vom aktuell angemeldeten Benutzer
      * gespeicherten Übungen aus der Datenbank.
+     *
+     * Der Datenbankzugriff läuft in einem
+     * Hintergrund-Thread.
      */
     private void loadExercises() {
 
@@ -237,6 +291,8 @@ public class ExerciseController implements Controller {
                     "Please log in first."
             );
 
+            statusLabel.setText("Not logged in.");
+
             return;
         }
 
@@ -244,6 +300,13 @@ public class ExerciseController implements Controller {
         int userId = Session.getUserId();
 
 
+        // UI-Thread: Status aktualisieren.
+        statusLabel.setText("Loading exercises...");
+
+
+        /*
+         * Task kapselt die Hintergrundoperation.
+         */
         Task<java.util.List<Exercise>> task =
                 new Task<>() {
 
@@ -251,12 +314,20 @@ public class ExerciseController implements Controller {
                     protected java.util.List<Exercise> call()
                             throws Exception {
 
+                        /*
+                         * Dieser Code läuft NICHT auf dem
+                         * JavaFX Application Thread.
+                         */
                         return exerciseService
                                 .getAllExercises(userId);
                     }
                 };
 
 
+        /*
+         * Wird nach erfolgreichem Abschluss wieder
+         * auf dem JavaFX Application Thread ausgeführt.
+         */
         task.setOnSucceeded(event -> {
 
             ObservableList<Exercise> exercises =
@@ -265,10 +336,30 @@ public class ExerciseController implements Controller {
                     );
 
             exerciseListView.setItems(exercises);
+
+            statusLabel.setText(
+                    exercises.size()
+                            + " exercise(s) loaded."
+            );
         });
 
 
+        /*
+         * Wird ebenfalls auf dem JavaFX Application Thread
+         * ausgeführt.
+         */
         task.setOnFailed(event -> {
+
+            statusLabel.setText(
+                    "Could not load exercises."
+            );
+
+            Throwable exception = task.getException();
+
+            if (exception != null) {
+                exception.printStackTrace();
+            }
+
 
             showAlert(
                     Alert.AlertType.ERROR,
@@ -278,17 +369,19 @@ public class ExerciseController implements Controller {
         });
 
 
-        Thread thread = new Thread(task);
-
-        thread.setDaemon(true);
-
-        thread.start();
+        /*
+         * Task wird dem Thread-Pool übergeben.
+         *
+         * Dadurch läuft der Datenbankzugriff
+         * parallel zum JavaFX Application Thread.
+         */
+        executor.submit(task);
     }
 
 
-// -------------------------
-// LIST DISPLAY
-// -------------------------
+    // =====================================================
+    // LIST DISPLAY
+    // =====================================================
 
     /**
      * Legt fest, wie die Übungen in der ListView
@@ -350,9 +443,9 @@ public class ExerciseController implements Controller {
     }
 
 
-// -------------------------
-// SHOW DETAILS
-// -------------------------
+    // =====================================================
+    // SHOW DETAILS
+    // =====================================================
 
     /**
      * Zeigt alle gespeicherten Informationen
@@ -415,9 +508,9 @@ public class ExerciseController implements Controller {
         selectedExerciseSpecific3.setVisible(false);
 
 
-        // -------------------------
+        // =================================================
         // WEIGHT
-        // -------------------------
+        // =================================================
 
         if (exercise instanceof WeightExercise weight) {
 
@@ -442,9 +535,9 @@ public class ExerciseController implements Controller {
         }
 
 
-        // -------------------------
+        // =================================================
         // RUNNING
-        // -------------------------
+        // =================================================
 
         else if (exercise instanceof CardioRunningExercise running) {
 
@@ -470,9 +563,9 @@ public class ExerciseController implements Controller {
         }
 
 
-        // -------------------------
+        // =================================================
         // CALISTHENICS
-        // -------------------------
+        // =================================================
 
         else if (exercise instanceof CardioCalisthenicsExercise calisthenics) {
 
@@ -516,9 +609,9 @@ public class ExerciseController implements Controller {
     }
 
 
-// -------------------------
-// DELETE SELECTED EXERCISE
-// -------------------------
+    // =====================================================
+    // DELETE SELECTED EXERCISE
+    // =====================================================
 
     @FXML
     public void handleDeleteExercise() {
@@ -592,6 +685,15 @@ public class ExerciseController implements Controller {
                 selectedExercise.getId();
 
 
+        // UI-Thread: Button deaktivieren.
+        deleteExerciseButton.setDisable(true);
+
+        statusLabel.setText("Deleting exercise...");
+
+
+        /*
+         * Datenbankoperation als Hintergrund-Task.
+         */
         Task<Void> task =
                 new Task<>() {
 
@@ -599,6 +701,10 @@ public class ExerciseController implements Controller {
                     protected Void call()
                             throws Exception {
 
+                        /*
+                         * Dieser Code läuft im
+                         * Hintergrund-Thread.
+                         */
                         exerciseService.deleteExercise(
                                 userId,
                                 exerciseId
@@ -610,6 +716,11 @@ public class ExerciseController implements Controller {
 
 
         task.setOnSucceeded(event -> {
+
+            /*
+             * Dieser Code läuft wieder auf dem
+             * JavaFX Application Thread.
+             */
 
             exerciseListView
                     .getItems()
@@ -625,6 +736,14 @@ public class ExerciseController implements Controller {
             exerciseDetails.setManaged(false);
 
 
+            deleteExerciseButton.setDisable(false);
+
+
+            statusLabel.setText(
+                    "Exercise deleted successfully."
+            );
+
+
             showAlert(
                     Alert.AlertType.INFORMATION,
                     "Exercise deleted",
@@ -635,6 +754,20 @@ public class ExerciseController implements Controller {
 
         task.setOnFailed(event -> {
 
+            deleteExerciseButton.setDisable(false);
+
+            statusLabel.setText(
+                    "Could not delete exercise."
+            );
+
+
+            Throwable exception = task.getException();
+
+            if (exception != null) {
+                exception.printStackTrace();
+            }
+
+
             showAlert(
                     Alert.AlertType.ERROR,
                     "Database error",
@@ -643,17 +776,16 @@ public class ExerciseController implements Controller {
         });
 
 
-        Thread thread = new Thread(task);
-
-        thread.setDaemon(true);
-
-        thread.start();
+        /*
+         * Hintergrundausführung starten.
+         */
+        executor.submit(task);
     }
 
 
-// -------------------------
-// SHOW CORRECT FIELDS
-// -------------------------
+    // =====================================================
+    // SHOW CORRECT FIELDS
+    // =====================================================
 
     private void updateFields() {
 
@@ -686,9 +818,9 @@ public class ExerciseController implements Controller {
     }
 
 
-// -------------------------
-// CREATE EXERCISE
-// -------------------------
+    // =====================================================
+    // CREATE EXERCISE
+    // =====================================================
 
     @FXML
     public void handleCreateExercise() {
@@ -715,9 +847,9 @@ public class ExerciseController implements Controller {
                 exerciseCategory.getValue();
 
 
-        // -------------------------
+        // =================================================
         // BASIC VALIDATION
-        // -------------------------
+        // =================================================
 
         if (name.isEmpty()) {
 
@@ -743,9 +875,9 @@ public class ExerciseController implements Controller {
         }
 
 
-        // -------------------------
+        // =================================================
         // GENERAL VALUES
-        // -------------------------
+        // =================================================
 
         double calories;
         double duration;
@@ -793,9 +925,9 @@ public class ExerciseController implements Controller {
         }
 
 
-        // -------------------------
+        // =================================================
         // DIFFICULTY
-        // -------------------------
+        // =================================================
 
         String difficulty =
                 exerciseDifficultyField
@@ -815,16 +947,16 @@ public class ExerciseController implements Controller {
         }
 
 
-        // -------------------------
+        // =================================================
         // CREATE EXERCISE
-        // -------------------------
+        // =================================================
 
         Exercise exercise;
 
 
-        // =====================================================
+        // =================================================
         // WEIGHT
-        // =====================================================
+        // =================================================
 
         if ("WEIGHT".equals(category)) {
 
@@ -894,9 +1026,9 @@ public class ExerciseController implements Controller {
         }
 
 
-        // =====================================================
+        // =================================================
         // CARDIO RUNNING
-        // =====================================================
+        // =================================================
 
         else if ("CARDIO_RUNNING".equals(category)) {
 
@@ -968,9 +1100,9 @@ public class ExerciseController implements Controller {
         }
 
 
-        // =====================================================
+        // =================================================
         // CARDIO CALISTHENICS
-        // =====================================================
+        // =================================================
 
         else {
 
@@ -1042,9 +1174,9 @@ public class ExerciseController implements Controller {
         }
 
 
-        // =====================================================
-        // SAVE EXERCISE
-        // =====================================================
+        // =================================================
+        // SAVE EXERCISE - BACKGROUND TASK
+        // =================================================
 
         Exercise toSave = exercise;
 
@@ -1052,6 +1184,20 @@ public class ExerciseController implements Controller {
                 Session.getUserId();
 
 
+        /*
+         * Button deaktivieren, damit der Benutzer
+         * nicht mehrfach auf "Add Exercise" klicken kann.
+         */
+        addExerciseButton.setDisable(true);
+
+        statusLabel.setText(
+                "Saving exercise..."
+        );
+
+
+        /*
+         * Task kapselt den Datenbankzugriff.
+         */
         Task<Exercise> task =
                 new Task<>() {
 
@@ -1059,6 +1205,10 @@ public class ExerciseController implements Controller {
                     protected Exercise call()
                             throws Exception {
 
+                        /*
+                         * Dieser Code läuft im
+                         * Hintergrund-Thread.
+                         */
                         return exerciseService
                                 .addExercise(
                                         userId,
@@ -1068,10 +1218,27 @@ public class ExerciseController implements Controller {
                 };
 
 
+        // =================================================
+        // SUCCESS
+        // =================================================
+
         task.setOnSucceeded(event -> {
+
+            /*
+             * Dieser Code läuft wieder auf dem
+             * JavaFX Application Thread.
+             */
 
             Exercise saved =
                     task.getValue();
+
+
+            addExerciseButton.setDisable(false);
+
+
+            statusLabel.setText(
+                    "Exercise saved successfully."
+            );
 
 
             showAlert(
@@ -1088,33 +1255,54 @@ public class ExerciseController implements Controller {
 
             /*
              * Nach dem Speichern die Liste
-             * direkt neu laden.
+             * erneut aus der Datenbank laden.
+             *
+             * Auch dieser Datenbankzugriff
+             * läuft wieder nebenläufig.
              */
             loadExercises();
         });
 
 
-        task.setOnFailed(event ->
-                showAlert(
-                        Alert.AlertType.ERROR,
-                        "Database error",
-                        "The exercise could not be saved."
-                )
-        );
+        // =================================================
+        // FAILED
+        // =================================================
+
+        task.setOnFailed(event -> {
+
+            addExerciseButton.setDisable(false);
+
+            statusLabel.setText(
+                    "Could not save exercise."
+            );
 
 
-        Thread thread =
-                new Thread(task);
+            Throwable exception =
+                    task.getException();
 
-        thread.setDaemon(true);
+            if (exception != null) {
+                exception.printStackTrace();
+            }
 
-        thread.start();
+
+            showAlert(
+                    Alert.AlertType.ERROR,
+                    "Database error",
+                    "The exercise could not be saved."
+            );
+        });
+
+
+        /*
+         * Task dem Thread-Pool übergeben.
+         */
+        executor.submit(task);
     }
 
 
-// -------------------------
-// CLEAR FIELDS
-// -------------------------
+    // =====================================================
+    // CLEAR FIELDS
+    // =====================================================
 
     private void clearFields() {
 
@@ -1162,20 +1350,37 @@ public class ExerciseController implements Controller {
     }
 
 
-// -------------------------
-// BACK TO MENU
-// -------------------------
+    // =====================================================
+    // BACK TO MENU
+    // =====================================================
 
     @FXML
     public void handleBackToMenu() {
+
+        shutdownExecutor();
 
         changeView("mainMenu.fxml");
     }
 
 
-// -------------------------
-// ALERT
-// -------------------------
+    // =====================================================
+    // SHUTDOWN EXECUTOR
+    // =====================================================
+
+    /**
+     * Beendet den Thread-Pool sauber.
+     */
+    private void shutdownExecutor() {
+
+        if (!executor.isShutdown()) {
+            executor.shutdownNow();
+        }
+    }
+
+
+    // =====================================================
+    // ALERT
+    // =====================================================
 
     private void showAlert(
             Alert.AlertType type,

@@ -46,13 +46,13 @@
               maxWidth="320"
               maxHeight="700"
               style="-fx-background-color: rgba(255,255,255,0.90);
-                 -fx-background-radius: 12;
-                 -fx-padding: 25;">
+                     -fx-background-radius: 12;
+                     -fx-padding: 25;">
 
 
             <Label text="Create Exercise"
                    style="-fx-font-size: 18px;
-                      -fx-font-weight: bold;"/>
+                          -fx-font-weight: bold;"/>
 
 
             <!-- ========================= -->
@@ -156,13 +156,33 @@
             </VBox>
 
 
-            <Button text="Add Exercise"
+            <!-- ========================= -->
+            <!-- STATUS                     -->
+            <!-- ========================= -->
+
+            <Label fx:id="statusLabel"
+                   text="Loading exercises..."
+                   wrapText="true"
+                   style="-fx-text-fill: #555555;
+                          -fx-font-size: 12px;"/>
+
+
+            <!-- ========================= -->
+            <!-- ADD EXERCISE               -->
+            <!-- ========================= -->
+
+            <Button fx:id="addExerciseButton"
+                    text="Add Exercise"
                     onAction="#handleCreateExercise"
                     maxWidth="200"/>
 
 
             <Separator/>
 
+
+            <!-- ========================= -->
+            <!-- BACK                       -->
+            <!-- ========================= -->
 
             <Button text="Back to Menu"
                     onAction="#handleBackToMenu"
@@ -180,13 +200,13 @@
               maxWidth="420"
               maxHeight="700"
               style="-fx-background-color: rgba(255,255,255,0.90);
-                 -fx-background-radius: 12;
-                 -fx-padding: 20;">
+                     -fx-background-radius: 12;
+                     -fx-padding: 20;">
 
 
             <Label text="Saved Exercises"
                    style="-fx-font-size: 18px;
-                      -fx-font-weight: bold;"/>
+                          -fx-font-weight: bold;"/>
 
 
             <!-- ========================= -->
@@ -213,7 +233,7 @@
 
             <Label text="Selected Exercise"
                    style="-fx-font-size: 16px;
-                      -fx-font-weight: bold;"/>
+                          -fx-font-weight: bold;"/>
 
 
             <VBox fx:id="exerciseDetails"
@@ -267,14 +287,16 @@
             <!-- DELETE                     -->
             <!-- ========================= -->
 
-            <Button text="Delete selected exercise"
+            <Button fx:id="deleteExerciseButton"
+                    text="Delete selected exercise"
                     onAction="#handleDeleteExercise"
                     maxWidth="Infinity"
                     style="-fx-background-color: #e74c3c;
-                       -fx-text-fill: white;
-                       -fx-font-weight: bold;"/>
+                           -fx-text-fill: white;
+                           -fx-font-weight: bold;"/>
 
         </VBox>
 
     </HBox>
+
 </StackPane>
