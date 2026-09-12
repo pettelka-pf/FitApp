@@ -452,12 +452,13 @@ public class StatisticsController implements Controller {
             return;
         }
 
-        if (monatBox.getValue() == null) {
+        String monatText = monatBox.getValue();
+
+        if (monatText == null) {
             return;
         }
 
-        Printer printer =
-                Printer.getDefaultPrinter();
+        Printer printer = Printer.getDefaultPrinter();
 
         if (printer == null) {
 
@@ -469,9 +470,7 @@ public class StatisticsController implements Controller {
         }
 
         PrinterJob printerJob =
-                PrinterJob.createPrinterJob(
-                        printer
-                );
+                PrinterJob.createPrinterJob(printer);
 
         if (printerJob == null) {
 
@@ -483,7 +482,7 @@ public class StatisticsController implements Controller {
         }
 
         /*
-         * A4 Querformat.
+         * A4 im Querformat.
          */
         PageLayout pageLayout =
                 printer.createPageLayout(
@@ -500,12 +499,11 @@ public class StatisticsController implements Controller {
          */
         printerJob.getJobSettings()
                 .setJobName(
-                        "Statistik_"
-                                + monatBox.getValue()
+                        "Statistik_" + monatText
                 );
 
         /*
-         * Druckdialog anzeigen.
+         * Druckdialog von JavaFX / Windows öffnen.
          */
         boolean dialogOk =
                 printerJob.showPrintDialog(
@@ -513,7 +511,7 @@ public class StatisticsController implements Controller {
                 );
 
         /*
-         * Benutzer hat abgebrochen.
+         * Benutzer hat den Druckdialog abgebrochen.
          */
         if (!dialogOk) {
 
@@ -523,100 +521,80 @@ public class StatisticsController implements Controller {
         }
 
         /*
-         * Merken, welche Elemente sichtbar waren.
+         * Alten Diagrammtitel merken.
          */
-        boolean jsonVisible =
-                jsonExportButton != null
-                        && jsonExportButton.isVisible();
+        String alterTitel = chart.getTitle();
 
-        boolean druckenVisible =
-                druckenButton != null
-                        && druckenButton.isVisible();
+        /*
+         * Alten Animationszustand merken.
+         */
+        boolean alteAnimation =
+                chart.getAnimated();
 
-        boolean backVisible =
-                backButton != null
-                        && backButton.isVisible();
+        boolean alteYAxisAnimation =
+                yAxis.getAnimated();
+
+        /*
+         * Statistikbezeichnung bestimmen.
+         */
+        String statistikText;
+
+        if (zeigeKalorien) {
+
+            statistikText =
+                    "Aufgenommene Kalorien";
+
+        } else {
+
+            statistikText =
+                    "Erreichte Schritte";
+        }
+
+        /*
+         * Temporärer Titel für den Ausdruck.
+         *
+         * Dadurch steht Monat/Jahr direkt auf der PDF.
+         */
+        chart.setTitle(
+                "Statistik - "
+                        + monatText
+                        + " - "
+                        + statistikText
+        );
+
+        /*
+         * Animation deaktivieren.
+         *
+         * Dadurch wird das Diagramm beim Drucken
+         * nicht gerade während einer Animation gerendert.
+         */
+        chart.setAnimated(false);
+        yAxis.setAnimated(false);
 
         try {
 
             /*
-             * Bedienelemente ausblenden.
+             * Sicherstellen, dass das Diagramm vollständig
+             * gelayoutet wurde.
+             */
+            chart.applyCss();
+            chart.layout();
+
+            /*
+             * WICHTIG:
              *
-             * Der Monat bleibt NICHT einfach unsichtbar,
-             * sondern wird weiter unten als Text angezeigt.
-             */
-            monatBox.setVisible(false);
-
-            if (jsonExportButton != null) {
-                jsonExportButton.setVisible(false);
-            }
-
-            if (druckenButton != null) {
-                druckenButton.setVisible(false);
-            }
-
-            if (backButton != null) {
-                backButton.setVisible(false);
-            }
-
-            /*
-             * Einen Drucktitel mit Monat und Statistikart
-             * temporär unter dem Benutzernamen anzeigen.
+             * Wir drucken direkt das vorhandene BarChart.
              *
-             * Dafür erzeugen wir einen zusätzlichen Label-
-             * Knoten direkt in der Statistik-Karte.
-             */
-            Label druckMonatLabel =
-                    new Label();
-
-            druckMonatLabel.setText(
-                    "Monat: "
-                            + monatBox.getValue()
-                            + "    |    Statistik: "
-                            + (
-                            zeigeKalorien
-                                    ? "Aufgenommene Kalorien"
-                                    : "Erreichte Schritte"
-                    )
-            );
-
-            druckMonatLabel.setStyle(
-                    "-fx-font-weight: bold;"
-            );
-
-            /*
-             * Das Label nach dem Benutzer-Label einfuegen.
-             */
-            int userLabelIndex =
-                    statistikKarte
-                            .getChildren()
-                            .indexOf(userNameLabel);
-
-            statistikKarte
-                    .getChildren()
-                    .add(
-                            userLabelIndex + 1,
-                            druckMonatLabel
-                    );
-
-            /*
-             * CSS und Layout aktualisieren.
-             */
-            statistikKarte.applyCss();
-            statistikKarte.layout();
-
-            /*
-             * Statistik-Karte drucken.
+             * Die VBox wird nicht verändert.
+             * Die Buttons werden nicht versteckt.
+             * Die Datenbank wird nicht erneut abgefragt.
              */
             boolean gedruckt =
                     printerJob.printPage(
                             pageLayout,
-                            statistikKarte
+                            chart
                     );
 
-            /*
-             * Druckauftrag abschliessen.
-             */
             if (gedruckt) {
 
                 printerJob.endJob();
@@ -630,47 +608,20 @@ public class StatisticsController implements Controller {
                 );
             }
 
-            /*
-             * Temporäres Drucklabel wieder entfernen.
-             */
-            statistikKarte
-                    .getChildren()
-                    .remove(
-                            druckMonatLabel
-                    );
-
         } finally {
 
             /*
-             * Urspruenglichen Zustand wiederherstellen.
+             * Ursprünglichen Zustand wiederherstellen.
              */
-            monatBox.setVisible(true);
+            chart.setTitle(alterTitel);
+            chart.setAnimated(alteAnimation);
+            yAxis.setAnimated(alteYAxisAnimation);
 
-            if (jsonExportButton != null) {
-                jsonExportButton.setVisible(
-                        jsonVisible
-                );
-            }
-
-            if (druckenButton != null) {
-                druckenButton.setVisible(
-                        druckenVisible
-                );
-            }
-
-            if (backButton != null) {
-                backButton.setVisible(
-                        backVisible
-                );
-            }
-
-            /*
-             * Layout wiederherstellen.
-             */
-            statistikKarte.applyCss();
-            statistikKarte.layout();
+            chart.applyCss();
+            chart.layout();
         }
     }
+
 
 
     // =========================================================

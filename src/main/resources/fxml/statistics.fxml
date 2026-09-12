@@ -50,6 +50,9 @@
         <Button text="Monatsstatistik als JSON exportieren"
                 onAction="#handleJsonExport" />
 
+        <Button text="Monatsstatistik drucken/als PDF speichern"
+                onAction="#handleDrucken" />
+
 
         <BarChart fx:id="chart"
                   legendVisible="false"
