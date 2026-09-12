@@ -2,6 +2,7 @@ package com.fitapp.controller;
 
 import com.fitapp.navigation.Navigator;
 import com.fitapp.util.BackgroundImageHelper;
+import com.fitapp.model.Session;
 
 import javafx.fxml.FXML;
 import javafx.scene.image.ImageView;
@@ -98,16 +99,13 @@ public class MainMenuController implements Controller {
     }
 
 
-    /*
     @FXML
-    public void handleStepCounter2() {
+    public void handleLogout() {
 
-        if (navigator == null) {
-            System.out.println("NAVIGATOR IST NULL!");
-        }
+        Session.logout();
 
-        changeView("stepCounter.fxml");
+        changeView("login.fxml");
     }
-    */
+
 
 }
