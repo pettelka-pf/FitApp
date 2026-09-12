@@ -47,6 +47,10 @@
                 text="Kalorien anzeigen"
                 onAction="#handleStatistikWechsel" />
 
+        <Button text="Monatsstatistik als JSON exportieren"
+                onAction="#handleJsonExport" />
+
+
         <BarChart fx:id="chart"
                   legendVisible="false"
                   VBox.vgrow="ALWAYS">
