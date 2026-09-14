@@ -17,7 +17,7 @@ A JavaFX-based fitness desktop application for tracking workouts, calories, and 
 
 ## Setup: 
 1. Clone the repository:
-   git clone https://github.com/pettelkr/FitApp.git
+   git clone https://github.com/pettelka-pf/FitApp.git
 
 2. Create a `.env` file in the root folder:
    DB_URL=your_neon_url
